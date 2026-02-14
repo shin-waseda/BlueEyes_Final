@@ -87,7 +87,7 @@ void drive_stop(void) {
   __HAL_TIM_SET_COUNTER(&htim17, 0);
 
   // 速度成分を完全にリセット
-  output_speed.vect = 0;
-  output_speed.neko = 0;
-  output_speed.target_catnip = 0;
+  // output_speed.vect = 0;
+  // output_speed.neko = 0;
+  // output_speed.target_catnip = 0;
 }
