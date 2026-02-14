@@ -141,7 +141,7 @@ void test_straight(void) {
   printf("Straight Test: %.0fmm, %.0fmm/s\n", dist, target_v);
   get_base_sensor_values();
   MF.FLAG.CTRL = 1;
-  drive_trapezoid(dist, target_v, 200);
+  drive_trapezoid(dist, 200, 200);
 }
 
 void test_rotate(void) {

@@ -156,18 +156,18 @@ void drive_straight(float dist, float target_v, float catnip) {
   drive_stop();
 }
 
-void drive_trapezoid(float dist, float start_v, float end_v) {
+void drive_trapezoid(float dist, float target_v, float end_v) {
   enable_motor();
   reset_current_position();
 
-  output_speed.vect = start_v;
+  output_speed.vect = 200;
   output_speed.neko = 0;
   output_speed.target_catnip = 0;
 
   drive_start();
   while (current_position.dist < dist) {
     output_speed.vect = get_target_v(current_position.dist, dist, ACCEL,
-                                     MAX_VECT, start_v, end_v);
+                                     MAX_VECT, target_v, end_v);
   }
   drive_stop();
 }

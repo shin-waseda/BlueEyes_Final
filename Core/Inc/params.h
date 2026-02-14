@@ -34,7 +34,7 @@ typedef struct {
 
 // trajectory.c
 #define ACCEL 500
-#define MAX_VECT 3000
+#define MAX_VECT 1500
 
 // maze.c
 #define GOAL_X 1
