@@ -1,0 +1,28 @@
+# Build artifacts
+Debug/
+Release/
+*.o
+*.su
+*.d
+*.elf
+*.bin
+*.hex
+*.map
+*.lst
+
+# STM32CubeIDE files
+.settings/
+.project
+.cproject
+.mxproject
+*.launch
+
+# Other temporary files
+*~
+*.swp
+*.bak
+*.tmp
+*.log
+
+# Git submodules or other git repos
+# .git/
