@@ -3,18 +3,29 @@
 #include "logic.h"
 #include "params.h"
 
-void half_sectionA(void) { drive_A(HALF_SEC_DIST); }
+void half_sectionA(void) {
+  MF.FLAG.CTRL = 0;
+  drive_A(HALF_SEC_DIST);
+}
 
-void half_sectionD(void) { drive_D(HALF_SEC_DIST); }
+void half_sectionD(void) {
+  MF.FLAG.CTRL = 0;
+  drive_D(HALF_SEC_DIST);
+}
 
-void one_sectionU(void) { drive_U(HALF_SEC_DIST * 2); }
+void one_sectionU(void) {
+  MF.FLAG.CTRL = 1;
+  drive_U(HALF_SEC_DIST * 2);
+}
 
 void turn_right(bool is_slalom) {
   if (is_slalom) {
     drive_S_R90();
   } else {
     half_sectionD();
+    drive_wait();
     drive_R_90R();
+    drive_wait();
     half_sectionA();
   }
 }
@@ -24,13 +35,17 @@ void turn_left(bool is_slalom) {
     drive_S_L90();
   } else {
     half_sectionD();
+    drive_wait();
     drive_R_90L();
+    drive_wait();
     half_sectionA();
   }
 }
 
-void turn_back(void) {
-  half_sectionD();
+void turn_back(bool is_last) {
+  if (!is_last) {
+    half_sectionD();
+  }
   uint8_t current_wall = maze_wall[mouse.y][mouse.x];
   uint8_t front_wall_mask;
   uint8_t left_wall_mask;
@@ -38,24 +53,24 @@ void turn_back(void) {
 
   switch (mouse.dir) {
   case 0: // 北向き
-    front_wall_mask = 0x88;
-    left_wall_mask = 0x11;
-    right_wall_mask = 0x44;
+    front_wall_mask = 0x08;
+    left_wall_mask = 0x01;
+    right_wall_mask = 0x04;
     break;
   case 1: // 東向き
-    front_wall_mask = 0x44;
-    left_wall_mask = 0x88;
-    right_wall_mask = 0x22;
+    front_wall_mask = 0x04;
+    left_wall_mask = 0x08;
+    right_wall_mask = 0x02;
     break;
   case 2: // 南向き
-    front_wall_mask = 0x22;
-    left_wall_mask = 0x44;
-    right_wall_mask = 0x11;
+    front_wall_mask = 0x02;
+    left_wall_mask = 0x04;
+    right_wall_mask = 0x01;
     break;
   case 3: // 西向き
-    front_wall_mask = 0x11;
-    left_wall_mask = 0x22;
-    right_wall_mask = 0x88;
+    front_wall_mask = 0x01;
+    left_wall_mask = 0x02;
+    right_wall_mask = 0x08;
     break;
   }
   if ((current_wall & front_wall_mask) && (current_wall & right_wall_mask)) {
@@ -78,18 +93,20 @@ void turn_back(void) {
   } else {
     drive_R_180();
   }
-  half_sectionA();
+  if (!is_last) {
+    half_sectionA();
+  }
 }
 
 void set_position(bool sw) {
   MF.FLAG.CTRL = 0;
-  drive_c(-100);
+  drive_c(-SETPOS_BACK);
   drive_wait();
   if (sw) {
     get_base_sensor_values();
     drive_wait();
   }
-  drive_c(HALF_SEC_DIST);
+  drive_c(SETPOS_FRONT);
   drive_wait();
 }
 
@@ -98,11 +115,28 @@ void hitting_wall(void) {
   hitting_step(drive_R_90L);
 }
 
-void drive_R_90R(void) { drive_R(R90_ANGLE, DEFAULT_NEKO); }
+void last_run(void) {
+  MF.FLAG.CTRL = 0;
+  half_sectionD();
+  drive_wait();
 
-void drive_R_90L(void) { drive_R(-L90_ANGLE, -DEFAULT_NEKO); }
+  turn_back(true);
+}
 
-void drive_R_180(void) { drive_R(R180_ANGLE, DEFAULT_NEKO); }
+void drive_R_90R(void) {
+  MF.FLAG.CTRL = 0;
+  drive_R(R90_ANGLE, DEFAULT_NEKO);
+}
+
+void drive_R_90L(void) {
+  MF.FLAG.CTRL = 0;
+  drive_R(-L90_ANGLE, -DEFAULT_NEKO);
+}
+
+void drive_R_180(void) {
+  MF.FLAG.CTRL = 0;
+  drive_R(R180_ANGLE, DEFAULT_NEKO);
+}
 
 void drive_S_R90(void) { drive_slalom(current_slalom_profile, true); }
 
@@ -112,26 +146,28 @@ void drive_c(float dist) {
   enable_motor();
   reset_current_position();
 
-  output_speed.vect = 200;
+  output_speed.vect = (dist > 0) ? DEFAULT_VECT : -DEFAULT_VECT;
   output_speed.neko = 0;
 
   drive_start();
-  while (current_position.dist < dist)
+  while (fabsf(current_position.dist) < fabsf(dist))
     ;
   drive_stop();
 }
 
 // 下位レイヤー
 void drive_A(float dist) {
-  drive_trapezoid(dist, current_speed.vect, target_speed.vect);
+  drive_trapezoid(dist, current_speed.vect, target_speed.vect,
+                  target_speed.vect);
 }
 
 void drive_D(float dist) {
-  drive_trapezoid(dist, current_speed.vect, DEFAULT_VECT);
+  drive_trapezoid(dist, current_speed.vect, DEFAULT_VECT, target_speed.vect);
 }
 
 void drive_U(float dist) {
-  drive_trapezoid(dist, current_speed.vect, target_speed.vect);
+  drive_trapezoid(dist, current_speed.vect, target_speed.vect,
+                  target_speed.vect);
 }
 
 void drive_wait(void) { HAL_Delay(50); }
@@ -156,18 +192,23 @@ void drive_straight(float dist, float target_v, float catnip) {
   drive_stop();
 }
 
-void drive_trapezoid(float dist, float target_v, float end_v) {
+void drive_trapezoid(float dist, float target_v, float end_v, float max_v) {
   enable_motor();
   reset_current_position();
 
-  output_speed.vect = 200;
+  float sign = (dist > 0) ? 1.0f : -1.0f;
+
+  output_speed.vect = target_v;
   output_speed.neko = 0;
   output_speed.target_catnip = 0;
 
   drive_start();
-  while (current_position.dist < dist) {
-    output_speed.vect = get_target_v(current_position.dist, dist, ACCEL,
-                                     MAX_VECT, target_v, end_v);
+
+  float abs_dist = fabsf(dist);
+  while (fabsf(current_position.dist) < abs_dist) {
+    float mag_v = get_target_v(fabsf(current_position.dist), abs_dist, ACCEL,
+                               fabsf(max_v), fabsf(target_v), fabsf(end_v));
+    output_speed.vect = mag_v * sign;
   }
   drive_stop();
 }

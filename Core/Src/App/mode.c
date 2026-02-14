@@ -6,7 +6,7 @@
 
 const SlalomProfile S90_400 = {.acc_dist = 25.6,
                                .decel_dist = 25.6,
-                               .const_dist = 45.0,
+                               .const_dist = 44.0,
                                .pre_offset_dist = 10.0,
                                .post_offset_dist = 20.0,
                                .target_catnip = 5500,
@@ -48,6 +48,7 @@ uint8_t execute_mode(uint8_t mode) {
     break;
 
   case 1:
+    select_speed(select_mode(1));
     enable_motor();
     MF.FLAG.SCND = 0;
     goal_x = GOAL_X;
@@ -61,23 +62,17 @@ uint8_t execute_mode(uint8_t mode) {
     drive_wait();
     set_position(0);
     drive_wait();
-    drive_R_90L();
-    drive_wait();
-    set_position(0);
-    drive_wait();
-    drive_R_90L();
-    drive_wait();
-    set_position(0);
-    drive_wait();
 
     get_base_sensor_values();
 
-    searchB_adachi(1);
+    led_pattern_search();
+    searchB_adachi(0);
     HAL_Delay(500);
 
     goal_x = goal_y = 0;
     MF.FLAG.RETURN = 1;
-    searchB_adachi(1);
+    led_pattern_search();
+    searchB_adachi(0);
 
     goal_x = GOAL_X;
     goal_y = GOAL_Y;
@@ -132,16 +127,15 @@ uint8_t execute_mode(uint8_t mode) {
 }
 
 void test_straight(void) {
-  uint16_t dist_idx = select_mode(1);  // 1-7 区画
-  uint16_t speed_idx = select_mode(1); // 1-7 (200, 400, ..., 1400)
-
+  uint16_t dist_idx = select_mode(1); // 1-7 区画
+  select_speed(select_mode(1));
   float dist = 180.0f * (float)dist_idx;
-  float target_v = 200.0f * ((float)speed_idx + 4.0f);
+  float target_v = target_speed.vect;
 
   printf("Straight Test: %.0fmm, %.0fmm/s\n", dist, target_v);
   get_base_sensor_values();
   MF.FLAG.CTRL = 1;
-  drive_trapezoid(dist, 200, 200);
+  drive_trapezoid(dist, 200, 200, target_v);
 }
 
 void test_rotate(void) {
@@ -178,10 +172,11 @@ void test_slalom(void) {
 
   printf("Slalom Test: Profile %.0f, %s, %d times\n", p.target_v,
          is_right ? "Right" : "Left", count);
-  drive_trapezoid(180 * 2, current_speed.vect, 400);
+  drive_trapezoid(180 * 2, current_speed.vect, 400, p.target_v);
   for (int i = 0; i < count; i++) {
     drive_slalom(p, is_right);
   }
+  drive_trapezoid(180, current_speed.vect, 200, p.target_v);
 }
 
 void test_drive(void) {
@@ -189,6 +184,9 @@ void test_drive(void) {
   while (1) {
     mode = select_mode(mode); // 1:Straight, 2:Rotate, 3:Slalom
     switch (mode) {
+    case 0:
+      set_position(0);
+      break;
     case 1:
       test_straight();
       break;
@@ -204,5 +202,31 @@ void test_drive(void) {
     default:
       return;
     }
+  }
+}
+
+void select_speed(uint8_t mode) {
+  switch (mode) {
+  case 1:
+    target_speed.vect = 400;
+    break;
+  case 2:
+    target_speed.vect = 500;
+    break;
+  case 3:
+    target_speed.vect = 600;
+    break;
+  case 4:
+    target_speed.vect = 800;
+    break;
+  case 5:
+    target_speed.vect = 1000;
+    break;
+  case 6:
+    target_speed.vect = 1200;
+    break;
+  case 7:
+    target_speed.vect = 1400;
+    break;
   }
 }
