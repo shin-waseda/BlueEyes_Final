@@ -18,6 +18,7 @@ void drive_calc_offset(uint8_t dist) {
     }
   }
   drive_stop();
+  MF.FLAG.CALC_OFFSET = 1;
 }
 
 void half_sectionA(void) {
@@ -187,17 +188,17 @@ void start_sequence(void) {
 
 // 下位レイヤー
 void drive_A(float dist) {
-  drive_trapezoid((MF.FLAG.CALC) ? dist - CALC_OFFSET_DIST : dist,
+  drive_trapezoid(dist,
                   current_speed.vect, target_speed.vect, target_speed.vect);
 }
 
 void drive_D(float dist) {
-  drive_trapezoid((MF.FLAG.CALC) ? dist - CALC_OFFSET_DIST : dist,
+  drive_trapezoid(dist,
                   current_speed.vect, DEFAULT_VECT, target_speed.vect);
 }
 
 void drive_U(float dist) {
-  drive_trapezoid((MF.FLAG.CALC) ? dist - CALC_OFFSET_DIST : dist,
+  drive_trapezoid(dist,
                   current_speed.vect, target_speed.vect, target_speed.vect);
 }
 
@@ -235,7 +236,13 @@ void drive_trapezoid(float dist, float target_v, float end_v, float max_v) {
 
   drive_start();
 
-  float abs_dist = fabsf(dist);
+  float effective_dist = dist;
+  if (MF.FLAG.CALC_OFFSET) {
+    effective_dist = dist - ((dist > 0) ? CALC_OFFSET_DIST : -CALC_OFFSET_DIST);
+    MF.FLAG.CALC_OFFSET = 0;
+  }
+
+  float abs_dist = fabsf(effective_dist);
   while (fabsf(current_position.dist) < abs_dist) {
     float mag_v = get_target_v(fabsf(current_position.dist), abs_dist, ACCEL,
                                fabsf(max_v), fabsf(target_v), fabsf(end_v));

@@ -17,8 +17,9 @@ typedef union {
     uint16_t WALL_VANISH_F : 1;
     uint16_t SCND : 1;
     uint16_t RETURN : 1;
-    uint16_t CALC : 1;
-    uint16_t OTHER : 9;
+    uint16_t CALC_OFFSET : 1;
+    uint16_t CALC : 1; // next linear drive should apply offset correction once
+    uint16_t OTHER : 8;
   } FLAG;
 } mouse_flag_t;
 
