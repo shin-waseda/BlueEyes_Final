@@ -33,6 +33,7 @@ typedef struct {
 #define R180_ANGLE 162.0f
 #define DEFAULT_NEKO 200
 #define DEFAULT_VECT 200
+#define CALC_OFFSET_DIST 10.0f
 
 // trajectory.c
 #define ACCEL 500

@@ -3,6 +3,23 @@
 #include "logic.h"
 #include "params.h"
 
+void drive_calc_offset(uint8_t dist) {
+  enable_motor();
+  reset_current_position();
+
+  output_speed.vect = target_speed.vect;
+
+  output_speed.target_catnip = 0;
+  bool done = 1;
+  drive_start();
+  while (current_position.dist < dist) {
+    if (done) {
+      conf_route_dijkstra();
+    }
+  }
+  drive_stop();
+}
+
 void half_sectionA(void) {
   MF.FLAG.CTRL = 0;
   drive_A(HALF_SEC_DIST);
@@ -155,19 +172,33 @@ void drive_c(float dist) {
   drive_stop();
 }
 
+void start_sequence(void) {
+  drive_R_90R();
+  drive_wait();
+  set_position(0);
+  drive_wait();
+  drive_R_90L();
+  drive_wait();
+  set_position(0);
+  drive_wait();
+
+  get_base_sensor_values();
+}
+
 // 下位レイヤー
 void drive_A(float dist) {
-  drive_trapezoid(dist, current_speed.vect, target_speed.vect,
-                  target_speed.vect);
+  drive_trapezoid((MF.FLAG.CALC) ? dist - CALC_OFFSET_DIST : dist,
+                  current_speed.vect, target_speed.vect, target_speed.vect);
 }
 
 void drive_D(float dist) {
-  drive_trapezoid(dist, current_speed.vect, DEFAULT_VECT, target_speed.vect);
+  drive_trapezoid((MF.FLAG.CALC) ? dist - CALC_OFFSET_DIST : dist,
+                  current_speed.vect, DEFAULT_VECT, target_speed.vect);
 }
 
 void drive_U(float dist) {
-  drive_trapezoid(dist, current_speed.vect, target_speed.vect,
-                  target_speed.vect);
+  drive_trapezoid((MF.FLAG.CALC) ? dist - CALC_OFFSET_DIST : dist,
+                  current_speed.vect, target_speed.vect, target_speed.vect);
 }
 
 void drive_wait(void) { HAL_Delay(50); }
@@ -243,7 +274,7 @@ void drive_slalom(SlalomProfile p, bool direction) {
   float sign = direction ? -1.0f : 1.0f;
   float catnip = p.target_catnip * sign;
 
-  cumulative_dist += p.pre_offset_dist;
+  cumulative_dist += (MF.FLAG.CALC) ? 0 : p.pre_offset_dist;
   output_speed.target_catnip = 0;
   while (current_position.dist < cumulative_dist)
     ;

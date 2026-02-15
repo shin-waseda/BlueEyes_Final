@@ -17,7 +17,8 @@ typedef union {
     uint16_t WALL_VANISH_F : 1;
     uint16_t SCND : 1;
     uint16_t RETURN : 1;
-    uint16_t OTHER : 10;
+    uint16_t CALC : 1;
+    uint16_t OTHER : 9;
   } FLAG;
 } mouse_flag_t;
 

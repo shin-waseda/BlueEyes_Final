@@ -99,3 +99,69 @@ void conf_route(void) {
     r_cnt = 0;
   }
 }
+
+void conf_route_dijkstra(void) {
+  get_wall();
+  write_map();
+
+  if (wall_temp & route[r_cnt]) {
+    dijkstra(mouse.x, mouse.y, mouse.dir, goal_x, goal_y);
+    make_route_dijkstra(goal_x, goal_y);
+    r_cnt = 0;
+  }
+}
+
+void searchB_dijkstra(bool is_slalom) {
+  MF.FLAG.CTRL = 1;
+  MF.FLAG.CALC = 1;
+
+  if (MF.FLAG.SCND) {
+    load_map_from_flash();
+  }
+
+  if (!MF.FLAG.RETURN) {
+    get_wall();
+    wall_temp &= ~0x88;
+    write_map();
+  }
+
+  half_sectionA();
+  adv_pos();
+  get_wall();
+  write_map();
+
+  r_cnt = 0;
+  dijkstra(mouse.x, mouse.y, mouse.dir, goal_x, goal_y);
+  make_route_dijkstra(goal_x, goal_y);
+
+  do {
+    drive_calc_offset();
+    switch (route[r_cnt++]) {
+    case 0x88:
+      one_sectionU();
+      break;
+    case 0x44:
+      turn_right(is_slalom);
+      turn_dir(DIR_TURN_R90);
+      break;
+    case 0x22:
+      turn_back(false);
+      turn_dir(DIR_TURN_180);
+      break;
+    case 0x11:
+      turn_left(is_slalom);
+      turn_dir(DIR_TURN_L90);
+      break;
+    }
+    adv_pos();
+    conf_route();
+  } while ((mouse.x != goal_x) || (mouse.y != goal_y));
+
+  last_run();
+  turn_dir(DIR_TURN_180);
+
+  led_pattern_goal();
+
+  if (!MF.FLAG.SCND)
+    store_map_in_flash();
+}

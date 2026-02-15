@@ -103,4 +103,24 @@ void map_init(void);
 void update_map_info(MazePosition s, uint8_t wall_info);
 void turn_dir(uint8_t t_pat);
 
+// dijkstra.c
+void dijkstra(uint8_t start_x, uint8_t start_y, uint8_t start_dir,
+              uint8_t goal_x_, uint8_t goal_y_);
+void make_route_dijkstra(uint8_t goal_x_, uint8_t goal_y_);
+
+// priority_queue.c
+#define PQ_SIZE 256
+
+typedef struct {
+  uint8_t x;
+  uint8_t y;
+  uint8_t dir;
+  uint16_t dist;
+} PQNode;
+
+void pq_init(void);
+void pq_push(uint8_t x, uint8_t y, uint8_t dir, uint16_t dist);
+PQNode pq_pop(void);
+bool pq_empty(void);
+
 #endif /* LOGIC_H */

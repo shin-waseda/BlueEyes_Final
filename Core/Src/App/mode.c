@@ -54,16 +54,7 @@ uint8_t execute_mode(uint8_t mode) {
     goal_x = GOAL_X;
     goal_y = GOAL_Y;
 
-    drive_R_90R();
-    drive_wait();
-    set_position(0);
-    drive_wait();
-    drive_R_90L();
-    drive_wait();
-    set_position(0);
-    drive_wait();
-
-    get_base_sensor_values();
+    start_sequence();
 
     led_pattern_search();
     searchB_adachi(0);
@@ -73,6 +64,32 @@ uint8_t execute_mode(uint8_t mode) {
     MF.FLAG.RETURN = 1;
     led_pattern_search();
     searchB_adachi(0);
+
+    goal_x = GOAL_X;
+    goal_y = GOAL_Y;
+    MF.FLAG.RETURN = 0;
+
+    disable_motor();
+
+    break;
+
+  case 2:
+    select_speed(select_mode(1));
+    enable_motor();
+    MF.FLAG.SCND = 0;
+    goal_x = GOAL_X;
+    goal_y = GOAL_Y;
+
+    start_sequence();
+
+    led_pattern_search();
+    searchB_dijkstra(0);
+    HAL_Delay(500);
+
+    goal_x = goal_y = 0;
+    MF.FLAG.RETURN = 1;
+    led_pattern_search();
+    searchB_dijkstra(0);
 
     goal_x = GOAL_X;
     goal_y = GOAL_Y;
