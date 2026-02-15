@@ -7,9 +7,9 @@
 const SlalomProfile S90_400 = {.acc_dist = 25.6,
                                .decel_dist = 25.6,
                                .const_dist = 44.0,
-                               .pre_offset_dist = 10.0,
-                               .post_offset_dist = 20.0,
-                               .target_catnip = 5500,
+                               .pre_offset_dist = 10.0 + 23,
+                               .post_offset_dist = 20.0 + 3,
+                               .target_catnip = 5000,
                                .max_neko = 350,
                                .target_v = 400};
 
@@ -83,13 +83,13 @@ uint8_t execute_mode(uint8_t mode) {
     start_sequence();
 
     led_pattern_search();
-    searchB_dijkstra(0);
+    searchB_dijkstra(1);
     HAL_Delay(500);
 
     goal_x = goal_y = 0;
     MF.FLAG.RETURN = 1;
     led_pattern_search();
-    searchB_dijkstra(0);
+    searchB_dijkstra(1);
 
     goal_x = GOAL_X;
     goal_y = GOAL_Y;
@@ -99,6 +99,22 @@ uint8_t execute_mode(uint8_t mode) {
 
     break;
 
+  case 5:
+    printf("Dijkstra Test.\n");
+
+    load_map_from_flash();
+
+    make_smap_adachi();
+    make_route();
+    dump_combined_map();
+
+    dijkstra(mouse.x, mouse.y, mouse.dir, GOAL_X, GOAL_Y);
+    make_route_dijkstra(GOAL_X, GOAL_Y);
+    dump_walls();
+    dump_cost_map();
+    dump_route();
+    dump_path_on_map(mouse.x, mouse.y, GOAL_X, GOAL_Y);
+    break;
   case 6:
     test_drive();
     break;
@@ -181,6 +197,7 @@ void test_rotate(void) {
 }
 
 void test_slalom(void) {
+  MF.FLAG.CALC_OFFSET = 0;
   SlalomProfile p = select_S90_param(select_mode(1));
   uint16_t dir = select_mode(1);        // 1:Right, 2:Left
   uint16_t count_mode = select_mode(1); // 1:1time, other:16times
@@ -190,11 +207,12 @@ void test_slalom(void) {
 
   printf("Slalom Test: Profile %.0f, %s, %d times\n", p.target_v,
          is_right ? "Right" : "Left", count);
-  drive_trapezoid(180 * 2, current_speed.vect, 400, p.target_v);
+  set_position(0);
+  drive_trapezoid(90, current_speed.vect, 400, p.target_v);
   for (int i = 0; i < count; i++) {
     drive_slalom(p, is_right);
   }
-  drive_trapezoid(180, current_speed.vect, 200, p.target_v);
+  // drive_trapezoid(180, current_speed.vect, 200, p.target_v);
 }
 
 void test_drive(void) {

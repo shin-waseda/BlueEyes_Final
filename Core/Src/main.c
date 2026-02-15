@@ -113,6 +113,8 @@ int main(void) {
   HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
   HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED);
   sensor_init();
+  search_init();
+  pq_init();
 
   printf("Hello World\n");
 

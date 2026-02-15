@@ -104,6 +104,7 @@ void update_map_info(MazePosition s, uint8_t wall_info);
 void turn_dir(uint8_t t_pat);
 
 // dijkstra.c
+#define MAX_COST 0xFFFF
 void dijkstra(uint8_t start_x, uint8_t start_y, uint8_t start_dir,
               uint8_t goal_x_, uint8_t goal_y_);
 void make_route_dijkstra(uint8_t goal_x_, uint8_t goal_y_);

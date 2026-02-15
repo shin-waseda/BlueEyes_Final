@@ -5,8 +5,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define MAX_COST 0xFFFF
-
 // 前の状態から来た時の動作
 typedef enum {
   OP_NONE = 0,
@@ -17,10 +15,10 @@ typedef enum {
 } PrevOp;
 
 typedef struct {
-    uint16_t dist;      // 距離 (0-65535)
-    uint8_t prev_dir:3; // 0-7あれば十分 (3bit)
-    uint8_t prev_op:3;  // PrevOpの列挙型 (3bit)
-    uint8_t visited:1;  // 0 or 1 (1bit)
+  uint16_t dist;        // 距離 (0-65535)
+  uint8_t prev_dir : 3; // 0-7あれば十分 (3bit)
+  uint8_t prev_op : 3;  // PrevOpの列挙型 (3bit)
+  uint8_t visited : 1;  // 0 or 1 (1bit)
 } __attribute__((packed)) State;
 
 static State st[16][16][4];
@@ -215,4 +213,135 @@ void make_route_dijkstra(uint8_t goal_x_, uint8_t goal_y_) {
     route[r_i++] = path_actions[--path_idx];
   }
   route[r_i] = 0xFF;
+}
+
+#include "global.h"
+#include "interface.h"
+#include "logic.h"
+#include "params.h"
+
+void dump_walls(void) {
+  printf("\r\n=== WALL MAP ===\r\n");
+
+  for (int y = 15; y >= 0; y--) {
+    /* 上壁 */
+    for (int x = 0; x < 16; x++) {
+      printf("+");
+      if (has_wall(x, y, 0))
+        printf("---"); // North
+      else
+        printf("   ");
+    }
+    printf("+\r\n");
+
+    /* 左右壁 */
+    for (int x = 0; x < 16; x++) {
+      if (has_wall(x, y, 3))
+        printf("|"); // West
+      else
+        printf(" ");
+
+      printf("   ");
+    }
+
+    /* 右端 */
+    if (has_wall(15, y, 1))
+      printf("|");
+    printf("\r\n");
+  }
+
+  /* 最下段 */
+  for (int x = 0; x < 16; x++) {
+    printf("+---");
+  }
+  printf("+\r\n");
+}
+
+void dump_cost_map(void) {
+  printf("\r\n=== COST MAP (min over dir) ===\r\n");
+
+  for (int y = 15; y >= 0; y--) {
+    for (int x = 0; x < 16; x++) {
+      uint16_t best = MAX_COST;
+
+      for (int d = 0; d < 4; d++) {
+        if (st[x][y][d].dist < best)
+          best = st[x][y][d].dist;
+      }
+
+      if (best == MAX_COST)
+        printf(" -- ");
+      else
+        printf("%3d ", best);
+    }
+    printf("\r\n");
+  }
+}
+
+void dump_route(void) {
+  printf("\r\n=== ROUTE ACTIONS ===\r\n");
+
+  for (int i = 0; route[i] != 0xFF; i++) {
+    uint8_t a = route[i];
+
+    if (a == 0x88)
+      printf("%3d: FWD\r\n", i);
+    else if (a == 0x44)
+      printf("%3d: RIGHT\r\n", i);
+    else if (a == 0x11)
+      printf("%3d: LEFT\r\n", i);
+    else if (a == 0x22)
+      printf("%3d: BACK\r\n", i);
+    else
+      printf("%3d: UNKNOWN %02X\r\n", i, a);
+  }
+
+  printf("END\r\n");
+}
+
+void dump_path_on_map(uint8_t sx, uint8_t sy, uint8_t gx, uint8_t gy) {
+  char mark[16][16] = {0};
+
+  /* ゴールから復元して印を付ける */
+  int8_t goal_dir = 0;
+  uint16_t best = MAX_COST;
+
+  for (int d = 0; d < 4; d++) {
+    if (st[gx][gy][d].dist < best) {
+      best = st[gx][gy][d].dist;
+      goal_dir = d;
+    }
+  }
+
+  int x = gx, y = gy, dir = goal_dir;
+
+  while (st[x][y][dir].dist > 0) {
+    mark[x][y] = '*';
+
+    int pd = st[x][y][dir].prev_dir;
+    if (pd < 0)
+      break;
+
+    /* 戻る */
+    static const int dx[4] = {0, 1, 0, -1};
+    static const int dy[4] = {1, 0, -1, 0};
+
+    x -= dx[dir];
+    y -= dy[dir];
+    dir = pd;
+  }
+
+  mark[sx][sy] = 'S';
+  mark[gx][gy] = 'G';
+
+  printf("\r\n=== PATH MAP ===\r\n");
+  for (int yy = 15; yy >= 0; yy--) {
+    for (int xx = 0; xx < 16; xx++) {
+      char c = mark[xx][yy];
+      if (c == 0)
+        c = '.';
+      printf("%c ", c);
+    }
+    printf("\r\n");
+  }
 }

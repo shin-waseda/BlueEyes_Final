@@ -131,11 +131,15 @@ void searchB_dijkstra(bool is_slalom) {
   write_map();
 
   r_cnt = 0;
+  bool first = 1;
   dijkstra(mouse.x, mouse.y, mouse.dir, goal_x, goal_y);
   make_route_dijkstra(goal_x, goal_y);
 
   do {
-    drive_calc_offset();
+    if (!first) {
+      drive_calc_offset(CALC_OFFSET_DIST);
+      first = 0;
+    }
     switch (route[r_cnt++]) {
     case 0x88:
       one_sectionU();
@@ -154,7 +158,7 @@ void searchB_dijkstra(bool is_slalom) {
       break;
     }
     adv_pos();
-    conf_route();
+    // conf_route();
   } while ((mouse.x != goal_x) || (mouse.y != goal_y));
 
   last_run();
@@ -164,4 +168,39 @@ void searchB_dijkstra(bool is_slalom) {
 
   if (!MF.FLAG.SCND)
     store_map_in_flash();
+}
+
+void dump_combined_map(void) {
+  printf("\r\n--- Combined Maze Map (Cost & Wall) ---\r\n");
+
+  for (int y = 15; y >= 0; y--) {
+    // 1. 北側の壁を描画
+    for (int x = 0; x < 16; x++) {
+      // 北(bit3: 0x08)に壁があるかチェック
+      printf("+%s", (maze_wall[y][x] & 0x08) ? "---" : "   ");
+    }
+    printf("+\r\n");
+
+    // 2. 西壁とコスト(歩数)を描画
+    for (int x = 0; x < 16; x++) {
+      // 西(bit0: 0x01)に壁があるかチェック
+      printf("%c", (maze_wall[y][x] & 0x01) ? '|' : ' ');
+
+      // 足立法のコスト(smap)を表示。Dijkstraなら st[x][y][dir].dist に変更可
+      uint16_t cost = smap[y][x];
+      if (cost == 0xFFFF) {
+        printf("###"); // 未到達・到達不能
+      } else {
+        printf("%3d", cost % 1000); // 3桁で表示
+      }
+    }
+    // 最東端(東bit2: 0x04)の壁
+    printf("%c\r\n", (maze_wall[y][15] & 0x04) ? '|' : ' ');
+  }
+
+  // 3. 最南端の底辺を描画
+  for (int x = 0; x < 16; x++) {
+    printf("+---");
+  }
+  printf("+\r\n");
 }

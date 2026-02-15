@@ -23,17 +23,20 @@ void drive_calc_offset(uint8_t dist) {
 
 void half_sectionA(void) {
   MF.FLAG.CTRL = 0;
-  drive_A(HALF_SEC_DIST);
+  drive_A((MF.FLAG.CALC_OFFSET) ? HALF_SEC_DIST - CALC_OFFSET_DIST
+                                : HALF_SEC_DIST);
 }
 
 void half_sectionD(void) {
   MF.FLAG.CTRL = 0;
-  drive_D(HALF_SEC_DIST);
+  drive_D((MF.FLAG.CALC_OFFSET) ? HALF_SEC_DIST - CALC_OFFSET_DIST
+                                : HALF_SEC_DIST);
 }
 
 void one_sectionU(void) {
   MF.FLAG.CTRL = 1;
-  drive_U(HALF_SEC_DIST * 2);
+  drive_U((MF.FLAG.CALC_OFFSET) ? HALF_SEC_DIST * 2 - CALC_OFFSET_DIST
+                                : HALF_SEC_DIST * 2);
 }
 
 void turn_right(bool is_slalom) {
@@ -188,18 +191,17 @@ void start_sequence(void) {
 
 // 下位レイヤー
 void drive_A(float dist) {
-  drive_trapezoid(dist,
-                  current_speed.vect, target_speed.vect, target_speed.vect);
+  drive_trapezoid(dist, current_speed.vect, target_speed.vect,
+                  target_speed.vect);
 }
 
 void drive_D(float dist) {
-  drive_trapezoid(dist,
-                  current_speed.vect, DEFAULT_VECT, target_speed.vect);
+  drive_trapezoid(dist, current_speed.vect, DEFAULT_VECT, target_speed.vect);
 }
 
 void drive_U(float dist) {
-  drive_trapezoid(dist,
-                  current_speed.vect, target_speed.vect, target_speed.vect);
+  drive_trapezoid(dist, current_speed.vect, target_speed.vect,
+                  target_speed.vect);
 }
 
 void drive_wait(void) { HAL_Delay(50); }
@@ -281,7 +283,8 @@ void drive_slalom(SlalomProfile p, bool direction) {
   float sign = direction ? -1.0f : 1.0f;
   float catnip = p.target_catnip * sign;
 
-  cumulative_dist += (MF.FLAG.CALC) ? 0 : p.pre_offset_dist;
+  cumulative_dist +=
+      (MF.FLAG.CALC) ? p.pre_offset_dist - CALC_OFFSET_DIST : p.pre_offset_dist;
   output_speed.target_catnip = 0;
   while (current_position.dist < cumulative_dist)
     ;
