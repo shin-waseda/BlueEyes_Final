@@ -13,8 +13,8 @@ void pq_push(uint8_t y, uint8_t x, uint8_t dir, uint16_t dist) {
 
   // 末尾に追加
   int idx = pq_count;
-  pq[idx].x = x;
   pq[idx].y = y;
+  pq[idx].x = x;
   pq[idx].dir = dir;
   pq[idx].dist = dist;
   pq_count++;

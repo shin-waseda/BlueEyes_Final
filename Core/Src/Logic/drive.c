@@ -3,7 +3,7 @@
 #include "logic.h"
 #include "params.h"
 
-void drive_calc_offset(uint8_t dist) {
+void drive_calc_offset(float dist) {
   enable_motor();
   reset_current_position();
 

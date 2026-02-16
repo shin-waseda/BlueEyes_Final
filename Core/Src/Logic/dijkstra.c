@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+MazePosition goals[GOAL_NUM] = {{GOAL_Y, GOAL_X}};
+
 // 前の状態から来た時の動作
 typedef enum {
   OP_NONE = 0,
@@ -46,9 +48,31 @@ static bool has_wall(int8_t x, int8_t y, uint8_t dir) {
   return true;
 }
 
-void dijkstra(uint8_t start_y, uint8_t start_x, uint8_t start_dir,
-              uint8_t goal_y_, uint8_t goal_x_) {
+static bool can_move(int8_t x, int8_t y, uint8_t dir) {
+  // A側の壁
+  if (has_wall(x, y, dir))
+    return false;
 
+  // 移動先
+  static const int8_t dx[4] = {0, 1, 0, -1};
+  static const int8_t dy[4] = {1, 0, -1, 0};
+
+  int8_t nx = x + dx[dir];
+  int8_t ny = y + dy[dir];
+
+  // 範囲外は不可
+  if (nx < 0 || nx > 15 || ny < 0 || ny > 15)
+    return false;
+
+  // B側の壁（逆方向）
+  uint8_t back = (dir + 2) % 4;
+  if (has_wall(nx, ny, back))
+    return false;
+
+  return true;
+}
+
+void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
   // 初期化
   for (int y = 0; y < 16; y++) {
     for (int x = 0; x < 16; x++) {
@@ -63,165 +87,222 @@ void dijkstra(uint8_t start_y, uint8_t start_x, uint8_t start_dir,
 
   pq_init();
 
-  st[start_y][start_x][start_dir].dist = 0;
-  pq_push(start_y, start_x, start_dir, 0);
+  static const int8_t dx[4] = {0, 1, 0, -1};
+  static const int8_t dy[4] = {1, 0, -1, 0};
 
-  const int8_t dx[4] = {0, 1, 0, -1};
-  const int8_t dy[4] = {1, 0, -1, 0};
-
-  // コスト設定（スラロームモデル）
   const uint16_t forward_cost = 1;
-  const uint16_t turn_90_cost = 7;
-  const uint16_t turn_180_cost = 100; // 非常に高いコスト
+  const uint16_t turn90_cost = 7;
+  const uint16_t turn180_cost = 100;
 
+  // Multi-Source（ゴール全部 dist=0）
+  for (int i = 0; i < goal_count; i++) {
+    uint8_t gx = goals[i].x;
+    uint8_t gy = goals[i].y;
+
+    for (int d = 0; d < 4; d++) {
+      st[gy][gx][d].dist = 0;
+      pq_push(gy, gx, d, 0);
+    }
+  }
+
+  // ダイクストラ本体
   while (!pq_empty()) {
+
     PQNode u = pq_pop();
 
     if (st[u.y][u.x][u.dir].visited)
       continue;
+
     st[u.y][u.x][u.dir].visited = true;
 
-    uint16_t current_dist = st[u.y][u.x][u.dir].dist;
+    uint16_t cd = st[u.y][u.x][u.dir].dist;
 
-    // スラロームモデル：すべての遷移で「回転しながら前進」
-    // 1. 直進（向きそのまま）
-    if (!has_wall(u.x, u.y, u.dir)) {
-      int8_t nx = u.x + dx[u.dir];
-      int8_t ny = u.y + dy[u.dir];
+    /* ============================
+       逆遷移：FORWARD
+       prev_dir = curr_dir
+    ============================ */
+    {
+      uint8_t prev_dir = u.dir;
 
-      if (nx >= 0 && nx <= 15 && ny >= 0 && ny <= 15) {
-        uint16_t new_dist = current_dist + forward_cost;
+      int px = u.x - dx[u.dir];
+      int py = u.y - dy[u.dir];
 
-        if (new_dist < st[ny][nx][u.dir].dist) {
-          st[ny][nx][u.dir].dist = new_dist;
-          st[ny][nx][u.dir].prev_dir = u.dir;
-          st[ny][nx][u.dir].prev_op = OP_FORWARD;
-          pq_push(ny, nx, u.dir, new_dist);
+      if (px >= 0 && px < 16 && py >= 0 && py < 16) {
+
+        // ★壁判定：prev→curr が可能か？
+        if (can_move(px, py, prev_dir)) {
+
+          uint16_t nd = cd + forward_cost;
+
+          if (nd < st[py][px][prev_dir].dist) {
+
+            st[py][px][prev_dir].dist = nd;
+
+            // prevから見て「次にやる動作」
+            st[py][px][prev_dir].prev_dir = u.dir;
+            st[py][px][prev_dir].prev_op = OP_FORWARD;
+
+            pq_push(py, px, prev_dir, nd);
+          }
         }
       }
     }
 
-    // 2. 右折（回転しながら前進）
-    uint8_t right_dir = (u.dir + 1) % 4;
-    if (!has_wall(u.x, u.y, right_dir)) {
-      int8_t nx = u.x + dx[right_dir];
-      int8_t ny = u.y + dy[right_dir];
+    /* ============================
+       逆遷移：TURN_RIGHT
+       prev_dir +1 = curr_dir
+    ============================ */
+    {
+      uint8_t prev_dir = (u.dir + 3) % 4;
 
-      if (nx >= 0 && nx <= 15 && ny >= 0 && ny <= 15) {
-        uint16_t new_dist = current_dist + turn_90_cost;
+      int px = u.x - dx[u.dir];
+      int py = u.y - dy[u.dir];
 
-        if (new_dist < st[ny][nx][right_dir].dist) {
-          st[ny][nx][right_dir].dist = new_dist;
-          st[ny][nx][right_dir].prev_dir = u.dir;
-          st[ny][nx][right_dir].prev_op = OP_TURN_RIGHT;
-          pq_push(ny, nx, right_dir, new_dist);
+      if (px >= 0 && px < 16 && py >= 0 && py < 16) {
+
+        // ★壁判定：prev_dirで進むとcurr_dirになる
+        if (can_move(px, py, u.dir)) {
+
+          uint16_t nd = cd + turn90_cost;
+
+          if (nd < st[py][px][prev_dir].dist) {
+
+            st[py][px][prev_dir].dist = nd;
+
+            st[py][px][prev_dir].prev_dir = u.dir;
+            st[py][px][prev_dir].prev_op = OP_TURN_RIGHT;
+
+            pq_push(py, px, prev_dir, nd);
+          }
         }
       }
     }
 
-    // 3. 左折（回転しながら前進）
-    uint8_t left_dir = (u.dir + 3) % 4;
-    if (!has_wall(u.x, u.y, left_dir)) {
-      int8_t nx = u.x + dx[left_dir];
-      int8_t ny = u.y + dy[left_dir];
+    /* ============================
+       逆遷移：TURN_LEFT
+    ============================ */
+    {
+      uint8_t prev_dir = (u.dir + 1) % 4;
 
-      if (nx >= 0 && nx <= 15 && ny >= 0 && ny <= 15) {
-        uint16_t new_dist = current_dist + turn_90_cost;
+      int px = u.x - dx[u.dir];
+      int py = u.y - dy[u.dir];
 
-        if (new_dist < st[ny][nx][left_dir].dist) {
-          st[ny][nx][left_dir].dist = new_dist;
-          st[ny][nx][left_dir].prev_dir = u.dir;
-          st[ny][nx][left_dir].prev_op = OP_TURN_LEFT;
-          pq_push(ny, nx, left_dir, new_dist);
+      if (px >= 0 && px < 16 && py >= 0 && py < 16) {
+
+        if (can_move(px, py, u.dir)) {
+
+          uint16_t nd = cd + turn90_cost;
+
+          if (nd < st[py][px][prev_dir].dist) {
+
+            st[py][px][prev_dir].dist = nd;
+
+            st[py][px][prev_dir].prev_dir = u.dir;
+            st[py][px][prev_dir].prev_op = OP_TURN_LEFT;
+
+            pq_push(py, px, prev_dir, nd);
+          }
         }
       }
     }
 
-    // 4. 180度ターン（回転しながら前進、非常に高コスト）
-    uint8_t back_dir = (u.dir + 2) % 4;
-    if (!has_wall(u.x, u.y, back_dir)) {
-      int8_t nx = u.x + dx[back_dir];
-      int8_t ny = u.y + dy[back_dir];
+    /* ============================
+       逆遷移：TURN_180
+    ============================ */
+    {
+      uint8_t prev_dir = (u.dir + 2) % 4;
 
-      if (nx >= 0 && nx <= 15 && ny >= 0 && ny <= 15) {
-        uint16_t new_dist = current_dist + turn_180_cost;
+      int px = u.x - dx[u.dir];
+      int py = u.y - dy[u.dir];
 
-        if (new_dist < st[ny][nx][back_dir].dist) {
-          st[ny][nx][back_dir].dist = new_dist;
-          st[ny][nx][back_dir].prev_dir = u.dir;
-          st[ny][nx][back_dir].prev_op = OP_TURN_180;
-          pq_push(ny, nx, back_dir, new_dist);
+      if (px >= 0 && px < 16 && py >= 0 && py < 16) {
+
+        if (can_move(px, py, u.dir)) {
+
+          uint16_t nd = cd + turn180_cost;
+
+          if (nd < st[py][px][prev_dir].dist) {
+
+            st[py][px][prev_dir].dist = nd;
+
+            st[py][px][prev_dir].prev_dir = u.dir;
+            st[py][px][prev_dir].prev_op = OP_TURN_180;
+
+            pq_push(py, px, prev_dir, nd);
+          }
         }
       }
     }
   }
 }
 
-void make_route_dijkstra(uint8_t goal_y_, uint8_t goal_x_) {
+void make_route_dijkstra(uint8_t goal_y, uint8_t goal_x) {
   for (int i = 0; i < 512; i++)
     route[i] = 0xFF;
-  uint16_t min_goal_dist = MAX_COST;
-  int8_t goal_dir = -1;
+
+  /* ゴールで最小distのdirを探す */
+  uint16_t best = MAX_COST;
+  int8_t dir_goal = -1;
 
   for (int d = 0; d < 4; d++) {
-    if (st[goal_y_][goal_x_][d].dist < min_goal_dist) {
-      min_goal_dist = st[goal_y_][goal_x_][d].dist;
-      goal_dir = d;
+    if (st[goal_y][goal_x][d].dist < best) {
+      best = st[goal_y][goal_x][d].dist;
+      dir_goal = d;
     }
   }
 
-  if (goal_dir == -1) {
+  if (dir_goal == -1)
     return;
-  }
 
-  static uint8_t path_actions[512];
-  int path_idx = 0;
+  static const int8_t dx[4] = {0, 1, 0, -1};
+  static const int8_t dy[4] = {1, 0, -1, 0};
 
-  int8_t curr_x = goal_x_;
-  int8_t curr_y = goal_y_;
-  int8_t curr_dir = goal_dir;
+  uint8_t path[512];
+  int idx = 0;
 
-  const int8_t dx[4] = {0, 1, 0, -1};
-  const int8_t dy[4] = {1, 0, -1, 0};
+  int8_t x = goal_x;
+  int8_t y = goal_y;
+  int8_t dir = dir_goal;
 
-  // スラロームモデル：すべての遷移で座標が変化する
-  while (st[curr_y][curr_x][curr_dir].dist > 0) {
-    // printf("BACK (%d,%d,%d) dist=%d op=%d prev_dir=%d\r\n", curr_x, curr_y,
-    //        curr_dir, st[curr_x][curr_y][curr_dir].dist,
-    //        st[curr_x][curr_y][curr_dir].prev_op,
-    //        st[curr_x][curr_y][curr_dir].prev_dir);
-    uint8_t op = st[curr_y][curr_x][curr_dir].prev_op;
-    int8_t prev_dir = st[curr_y][curr_x][curr_dir].prev_dir;
+  while (st[y][x][dir].prev_dir != -1) {
+    uint8_t op = st[y][x][dir].prev_op;
+    int8_t pdir = st[y][x][dir].prev_dir;
 
-    if (prev_dir == -1)
+    /* 動作を記録 */
+    switch (op) {
+    case OP_FORWARD:
+      path[idx++] = 0x88;
       break;
-
-    // すべての動作で座標を戻す（スラロームモデル）
-    curr_x -= dx[curr_dir];
-    curr_y -= dy[curr_dir];
-
-    // 動作コードを記録
-    if (op == OP_FORWARD) {
-      path_actions[path_idx++] = 0x88;
-    } else if (op == OP_TURN_RIGHT) {
-      path_actions[path_idx++] = 0x44;
-    } else if (op == OP_TURN_LEFT) {
-      path_actions[path_idx++] = 0x11;
-    } else if (op == OP_TURN_180) {
-      path_actions[path_idx++] = 0x22;
+    case OP_TURN_RIGHT:
+      path[idx++] = 0x44;
+      break;
+    case OP_TURN_LEFT:
+      path[idx++] = 0x11;
+      break;
+    case OP_TURN_180:
+      path[idx++] = 0x22;
+      break;
+    default:
+      break;
     }
 
-    curr_dir = prev_dir;
+    /* ★重要：dirを先に戻す */
+    dir = pdir;
 
-    if (path_idx >= 511)
+    /* ★そのdir方向に座標を戻す */
+    x -= dx[dir];
+    y -= dy[dir];
+
+    if (idx >= 511)
       break;
   }
 
-  int r_i = 0;
-  while (path_idx > 0) {
-    route[r_i++] = path_actions[--path_idx];
+  /* 逆順にしてrouteへ */
+  int r = 0;
+  while (idx > 0) {
+    route[r++] = path[--idx];
   }
-  route[r_i] = 0xFF;
+  route[r] = 0xFF;
 }
 
 void dump_wall_cost_map(void) {
@@ -318,12 +399,11 @@ void dump_path_on_map(uint8_t sy, uint8_t sx, uint8_t gy, uint8_t gx) {
     if (pd < 0)
       break;
 
-    /* 戻る */
     static const int dx[4] = {0, 1, 0, -1};
     static const int dy[4] = {1, 0, -1, 0};
 
-    x -= dx[dir];
-    y -= dy[dir];
+    x -= dx[pd];
+    y -= dy[pd];
     dir = pd;
   }
 

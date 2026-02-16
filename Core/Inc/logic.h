@@ -97,6 +97,12 @@ void test_drive(void);
 #define DIR_TURN_L90 0xff
 #define DIR_TURN_180 0x02
 void search_init(void);
+void last_run(void);
+void led_pattern_goal(void);
+void dump_wall_cost_map(void);
+void dump_route(void);
+void dump_path_on_map(uint8_t y, uint8_t x, uint8_t gy, uint8_t gx);
+void drive_calc_offset(float dist);
 
 // maze.c
 void map_init(void);
@@ -104,23 +110,25 @@ void update_map_info(MazePosition s, uint8_t wall_info);
 void turn_dir(uint8_t t_pat);
 
 // dijkstra.c
+extern MazePosition goals[GOAL_NUM];
+
 #define MAX_COST 0xFFFF
-void dijkstra(uint8_t start_x, uint8_t start_y, uint8_t start_dir,
-              uint8_t goal_x_, uint8_t goal_y_);
-void make_route_dijkstra(uint8_t goal_x_, uint8_t goal_y_);
+void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count);
+void make_route_dijkstra(/*uint8_t start_y, uint8_t start_x, uint8_t start_dir,*/
+                         uint8_t goal_y, uint8_t goal_x);
 
 // priority_queue.c
 #define PQ_SIZE 256
 
 typedef struct {
-  uint8_t x;
   uint8_t y;
+  uint8_t x;
   uint8_t dir;
   uint16_t dist;
 } PQNode;
 
 void pq_init(void);
-void pq_push(uint8_t x, uint8_t y, uint8_t dir, uint16_t dist);
+void pq_push(uint8_t y, uint8_t x, uint8_t dir, uint16_t dist);
 PQNode pq_pop(void);
 bool pq_empty(void);
 

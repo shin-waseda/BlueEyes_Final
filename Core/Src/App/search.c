@@ -105,7 +105,7 @@ void conf_route_dijkstra(void) {
   write_map();
 
   if (wall_temp & route[r_cnt]) {
-    dijkstra(mouse.x, mouse.y, mouse.dir, goal_x, goal_y);
+    dijkstra_multi_goal(goals, 1);
     make_route_dijkstra(goal_y, goal_x);
     r_cnt = 0;
   }
@@ -132,7 +132,7 @@ void searchB_dijkstra(bool is_slalom) {
 
   r_cnt = 0;
   bool first = 1;
-  dijkstra(mouse.y, mouse.x, mouse.dir, goal_y, goal_x);
+  dijkstra_multi_goal(goals, 1);
   make_route_dijkstra(goal_y, goal_x);
   dump_wall_cost_map();
   dump_route();
@@ -178,7 +178,7 @@ void searchB_dijkstra(bool is_slalom) {
 }
 
 void dump_combined_map(void) {
-  printf("\r\n--- Combined Maze Map (Cost & Wall) ---\r\n");
+  printf("\r\n--- Adachi Maze Map (Cost & Wall) ---\r\n");
 
   for (int y = 15; y >= 0; y--) {
     // 1. 北側の壁を描画

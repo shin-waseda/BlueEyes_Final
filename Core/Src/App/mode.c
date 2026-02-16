@@ -109,11 +109,11 @@ uint8_t execute_mode(uint8_t mode) {
     make_route();
     dump_combined_map();
 
-    dijkstra(mouse.x, mouse.y, mouse.dir, GOAL_X, GOAL_Y);
-    make_route_dijkstra(GOAL_X, GOAL_Y);
+    dijkstra_multi_goal(goals, 1);
+    make_route_dijkstra( GOAL_Y, GOAL_X);
     dump_wall_cost_map();
     dump_route();
-    dump_path_on_map(mouse.x, mouse.y, GOAL_X, GOAL_Y);
+    dump_path_on_map(mouse.y, mouse.x, GOAL_Y, GOAL_X);
     break;
   case 6:
     test_drive();
