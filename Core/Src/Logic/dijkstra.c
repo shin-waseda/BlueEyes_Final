@@ -7,7 +7,6 @@
 
 MazePosition goals[GOAL_NUM] = {{GOAL_Y, GOAL_X}};
 
-// 前の状態から来た時の動作
 typedef enum {
   OP_NONE = 0,
   OP_FORWARD,
@@ -17,10 +16,10 @@ typedef enum {
 } PrevOp;
 
 typedef struct {
-  uint16_t dist;        // 距離 (0-65535)
-  uint8_t prev_dir : 3; // 0-7あれば十分 (3bit)
-  uint8_t prev_op : 3;  // PrevOpの列挙型 (3bit)
-  uint8_t visited : 1;  // 0 or 1 (1bit)
+  uint16_t dist;
+  uint8_t prev_dir : 3;
+  uint8_t prev_op : 3;
+  uint8_t visited : 1;
 } __attribute__((packed)) State;
 
 static State st[16][16][4];
@@ -36,38 +35,14 @@ static bool has_wall(int8_t x, int8_t y, uint8_t dir) {
 
   switch (dir) {
   case 0:
-    return (w & 0x08) != 0; // 北
+    return (w & 0x08) != 0;
   case 1:
-    return (w & 0x04) != 0; // 東
+    return (w & 0x04) != 0;
   case 2:
-    return (w & 0x02) != 0; // 南
+    return (w & 0x02) != 0;
   case 3:
-    return (w & 0x01) != 0; // 西
+    return (w & 0x01) != 0;
   }
-
-  return true;
-}
-
-static bool can_move(int8_t x, int8_t y, uint8_t dir) {
-  // A側の壁
-  if (has_wall(x, y, dir))
-    return false;
-
-  // 移動先
-  static const int8_t dx[4] = {0, 1, 0, -1};
-  static const int8_t dy[4] = {1, 0, -1, 0};
-
-  int8_t nx = x + dx[dir];
-  int8_t ny = y + dy[dir];
-
-  // 範囲外は不可
-  if (nx < 0 || nx > 15 || ny < 0 || ny > 15)
-    return false;
-
-  // B側の壁（逆方向）
-  uint8_t back = (dir + 2) % 4;
-  if (has_wall(nx, ny, back))
-    return false;
 
   return true;
 }
@@ -94,7 +69,7 @@ void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
   const uint16_t turn90_cost = 7;
   const uint16_t turn180_cost = 100;
 
-  // Multi-Source（ゴール全部 dist=0）
+  // Multi-Source（全ゴール dist=0）
   for (int i = 0; i < goal_count; i++) {
     uint8_t gx = goals[i].x;
     uint8_t gy = goals[i].y;
@@ -105,9 +80,8 @@ void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
     }
   }
 
-  // ダイクストラ本体
+  // ダイクストラ本体：スタートに向かって逆方向に探索
   while (!pq_empty()) {
-
     PQNode u = pq_pop();
 
     if (st[u.y][u.x][u.dir].visited)
@@ -119,7 +93,7 @@ void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
 
     /* ============================
        逆遷移：FORWARD
-       prev_dir = curr_dir
+       prev_dir = curr_dir （スタート時も同じ向き）
     ============================ */
     {
       uint8_t prev_dir = u.dir;
@@ -128,21 +102,18 @@ void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
       int py = u.y - dy[u.dir];
 
       if (px >= 0 && px < 16 && py >= 0 && py < 16) {
+        // (px,py)から u.dir方向に進んで(u.x,u.y)に到達できるか
+        if (!has_wall(px, py, u.dir)) {
+          uint8_t back = (u.dir + 2) % 4;
+          if (!has_wall(u.x, u.y, back)) {
+            uint16_t nd = cd + forward_cost;
 
-        // ★壁判定：prev→curr が可能か？
-        if (can_move(px, py, prev_dir)) {
-
-          uint16_t nd = cd + forward_cost;
-
-          if (nd < st[py][px][prev_dir].dist) {
-
-            st[py][px][prev_dir].dist = nd;
-
-            // prevから見て「次にやる動作」
-            st[py][px][prev_dir].prev_dir = u.dir;
-            st[py][px][prev_dir].prev_op = OP_FORWARD;
-
-            pq_push(py, px, prev_dir, nd);
+            if (nd < st[py][px][prev_dir].dist) {
+              st[py][px][prev_dir].dist = nd;
+              st[py][px][prev_dir].prev_dir = u.dir;
+              st[py][px][prev_dir].prev_op = OP_FORWARD;
+              pq_push(py, px, prev_dir, nd);
+            }
           }
         }
       }
@@ -150,7 +121,8 @@ void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
 
     /* ============================
        逆遷移：TURN_RIGHT
-       prev_dir +1 = curr_dir
+       (u.dir + 1) % 4 = 右折後の向き
+       prev_dir = (u.dir + 3) % 4 = 元の向き
     ============================ */
     {
       uint8_t prev_dir = (u.dir + 3) % 4;
@@ -159,20 +131,18 @@ void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
       int py = u.y - dy[u.dir];
 
       if (px >= 0 && px < 16 && py >= 0 && py < 16) {
+        // (px,py)から u.dir方向（=右折後）に進んで(u.x,u.y)に到達できるか
+        if (!has_wall(px, py, u.dir)) {
+          uint8_t back = (u.dir + 2) % 4;
+          if (!has_wall(u.x, u.y, back)) {
+            uint16_t nd = cd + turn90_cost;
 
-        // ★壁判定：prev_dirで進むとcurr_dirになる
-        if (can_move(px, py, u.dir)) {
-
-          uint16_t nd = cd + turn90_cost;
-
-          if (nd < st[py][px][prev_dir].dist) {
-
-            st[py][px][prev_dir].dist = nd;
-
-            st[py][px][prev_dir].prev_dir = u.dir;
-            st[py][px][prev_dir].prev_op = OP_TURN_RIGHT;
-
-            pq_push(py, px, prev_dir, nd);
+            if (nd < st[py][px][prev_dir].dist) {
+              st[py][px][prev_dir].dist = nd;
+              st[py][px][prev_dir].prev_dir = u.dir;
+              st[py][px][prev_dir].prev_op = OP_TURN_RIGHT;
+              pq_push(py, px, prev_dir, nd);
+            }
           }
         }
       }
@@ -180,6 +150,8 @@ void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
 
     /* ============================
        逆遷移：TURN_LEFT
+       (u.dir + 3) % 4 = 左折後の向き
+       prev_dir = (u.dir + 1) % 4 = 元の向き
     ============================ */
     {
       uint8_t prev_dir = (u.dir + 1) % 4;
@@ -188,19 +160,17 @@ void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
       int py = u.y - dy[u.dir];
 
       if (px >= 0 && px < 16 && py >= 0 && py < 16) {
+        if (!has_wall(px, py, u.dir)) {
+          uint8_t back = (u.dir + 2) % 4;
+          if (!has_wall(u.x, u.y, back)) {
+            uint16_t nd = cd + turn90_cost;
 
-        if (can_move(px, py, u.dir)) {
-
-          uint16_t nd = cd + turn90_cost;
-
-          if (nd < st[py][px][prev_dir].dist) {
-
-            st[py][px][prev_dir].dist = nd;
-
-            st[py][px][prev_dir].prev_dir = u.dir;
-            st[py][px][prev_dir].prev_op = OP_TURN_LEFT;
-
-            pq_push(py, px, prev_dir, nd);
+            if (nd < st[py][px][prev_dir].dist) {
+              st[py][px][prev_dir].dist = nd;
+              st[py][px][prev_dir].prev_dir = u.dir;
+              st[py][px][prev_dir].prev_op = OP_TURN_LEFT;
+              pq_push(py, px, prev_dir, nd);
+            }
           }
         }
       }
@@ -208,6 +178,8 @@ void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
 
     /* ============================
        逆遷移：TURN_180
+       (u.dir + 2) % 4 = 180度後の向き
+       prev_dir = (u.dir + 2) % 4 = 元の向き
     ============================ */
     {
       uint8_t prev_dir = (u.dir + 2) % 4;
@@ -216,19 +188,17 @@ void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
       int py = u.y - dy[u.dir];
 
       if (px >= 0 && px < 16 && py >= 0 && py < 16) {
+        if (!has_wall(px, py, u.dir)) {
+          uint8_t back = (u.dir + 2) % 4;
+          if (!has_wall(u.x, u.y, back)) {
+            uint16_t nd = cd + turn180_cost;
 
-        if (can_move(px, py, u.dir)) {
-
-          uint16_t nd = cd + turn180_cost;
-
-          if (nd < st[py][px][prev_dir].dist) {
-
-            st[py][px][prev_dir].dist = nd;
-
-            st[py][px][prev_dir].prev_dir = u.dir;
-            st[py][px][prev_dir].prev_op = OP_TURN_180;
-
-            pq_push(py, px, prev_dir, nd);
+            if (nd < st[py][px][prev_dir].dist) {
+              st[py][px][prev_dir].dist = nd;
+              st[py][px][prev_dir].prev_dir = u.dir;
+              st[py][px][prev_dir].prev_op = OP_TURN_180;
+              pq_push(py, px, prev_dir, nd);
+            }
           }
         }
       }
@@ -240,7 +210,6 @@ void make_route_dijkstra(uint8_t goal_y, uint8_t goal_x) {
   for (int i = 0; i < 512; i++)
     route[i] = 0xFF;
 
-  /* ゴールで最小distのdirを探す */
   uint16_t best = MAX_COST;
   int8_t dir_goal = -1;
 
@@ -268,7 +237,6 @@ void make_route_dijkstra(uint8_t goal_y, uint8_t goal_x) {
     uint8_t op = st[y][x][dir].prev_op;
     int8_t pdir = st[y][x][dir].prev_dir;
 
-    /* 動作を記録 */
     switch (op) {
     case OP_FORWARD:
       path[idx++] = 0x88;
@@ -286,10 +254,7 @@ void make_route_dijkstra(uint8_t goal_y, uint8_t goal_x) {
       break;
     }
 
-    /* ★重要：dirを先に戻す */
     dir = pdir;
-
-    /* ★そのdir方向に座標を戻す */
     x -= dx[dir];
     y -= dy[dir];
 
@@ -297,7 +262,6 @@ void make_route_dijkstra(uint8_t goal_y, uint8_t goal_x) {
       break;
   }
 
-  /* 逆順にしてrouteへ */
   int r = 0;
   while (idx > 0) {
     route[r++] = path[--idx];
@@ -309,25 +273,21 @@ void dump_wall_cost_map(void) {
   printf("\r\n=== WALL + COST MAP ===\r\n");
 
   for (int y = 15; y >= 0; y--) {
-    /* --- 上壁行 --- */
     for (int x = 0; x < 16; x++) {
       printf("+");
-      if (has_wall(x, y, 0)) // North
+      if (has_wall(x, y, 0))
         printf("---");
       else
         printf("   ");
     }
     printf("+\r\n");
 
-    /* --- 中身行（左壁 + cost + 右壁） --- */
     for (int x = 0; x < 16; x++) {
-      /* West壁 */
       if (has_wall(x, y, 3))
         printf("|");
       else
         printf(" ");
 
-      /* cost表示 */
       uint16_t best = MAX_COST;
       for (int d = 0; d < 4; d++) {
         if (st[y][x][d].dist < best)
@@ -340,7 +300,6 @@ void dump_wall_cost_map(void) {
         printf("%3d", best);
     }
 
-    /* East壁（右端） */
     if (has_wall(15, y, 1))
       printf("|");
     else
@@ -349,7 +308,6 @@ void dump_wall_cost_map(void) {
     printf("\r\n");
   }
 
-  /* --- 最下段 --- */
   for (int x = 0; x < 16; x++)
     printf("+---");
   printf("+\r\n");
@@ -379,7 +337,6 @@ void dump_route(void) {
 void dump_path_on_map(uint8_t sy, uint8_t sx, uint8_t gy, uint8_t gx) {
   char mark[16][16] = {0};
 
-  /* ゴールから復元して印を付ける */
   int8_t goal_dir = 0;
   uint16_t best = MAX_COST;
 
