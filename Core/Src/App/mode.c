@@ -114,7 +114,6 @@ uint8_t execute_mode(uint8_t mode) {
     make_route_dijkstra(mouse.y, mouse.x, mouse.dir);
     dump_dijkstra_map(mouse.y, mouse.x, mouse.dir);
     dump_route_dijkstra();
-    dump_path_on_map(mouse.y, mouse.x, GOAL_Y, GOAL_X);
     break;
   case 6:
     test_drive();

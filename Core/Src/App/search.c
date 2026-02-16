@@ -81,7 +81,7 @@ void get_wall(void) {
   if (wall_temp & 0x11)
     led_state.LED.left = 1;
 
-  // led_write(led_state);
+  led_write(led_state);
 }
 void write_map(void) { update_map_info(mouse, wall_temp); }
 void conf_route(void) {
@@ -105,16 +105,6 @@ void conf_route_dijkstra(void) {
   // dump_route_dijkstra();
   r_cnt = 0;
 }
-// void conf_route_dijkstra(void) {
-//   get_wall();
-//   write_map();
-
-//   if (wall_temp & route[r_cnt]) {
-//     dijkstra_multi_goal(goals, GOAL_NUM);
-//     make_route_dijkstra(mouse.y, mouse.x, mouse.dir);
-//     r_cnt = 0;
-//   }
-// }
 
 void searchB_dijkstra(bool is_slalom) {
   MF.FLAG.CTRL = 1;
@@ -142,15 +132,7 @@ void searchB_dijkstra(bool is_slalom) {
   r_cnt = 0;
 
   do {
-    LEDinfo led_state;
-    led_state.LEDs = 0;
-    led_write(led_state);
-    // conf_route_dijkstra();
     drive_calc_offset(CALC_OFFSET_DIST);
-    led_state.LED.left = led_state.LED.right = led_state.LED.front = 1;
-    led_write(led_state);
-
-    // printf("%02X ", route[r_cnt]);
     switch (route[r_cnt++]) {
     case 0x88:
       one_sectionU();

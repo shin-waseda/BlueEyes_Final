@@ -106,7 +106,6 @@ void last_run(void);
 void led_pattern_goal(void);
 void dump_dijkstra_map(uint8_t my, uint8_t mx, uint8_t md);
 void dump_route_dijkstra(void);
-void dump_path_on_map(uint8_t y, uint8_t x, uint8_t gy, uint8_t gx);
 void drive_calc_offset(float dist);
 
 // maze.c

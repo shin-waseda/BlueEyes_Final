@@ -7,14 +7,6 @@
 
 MazePosition goals[GOAL_NUM] = {{GOAL_X, GOAL_Y}};
 
-// typedef enum {
-//   OP_NONE = 0,
-//   OP_FORWARD,
-//   OP_TURN_RIGHT,
-//   OP_TURN_LEFT,
-//   OP_TURN_180
-// } PrevOp;
-
 static const uint8_t turn_cost[4][4] = {
     /* pdir\udir */
     {0, 7, 100, 7},
@@ -35,29 +27,6 @@ State st[16][16][4];
 static const int8_t dx[4] = {0, 1, 0, -1};
 static const int8_t dy[4] = {1, 0, -1, 0};
 
-static bool has_wall(int8_t x, int8_t y, uint8_t dir) {
-  if (x < 0 || x > 15 || y < 0 || y > 15)
-    return true;
-
-  uint8_t w = maze_wall[y][x];
-
-  if (MF.FLAG.SCND)
-    w >>= 4;
-
-  switch (dir) {
-  case 0:
-    return (w & 0x08) != 0;
-  case 1:
-    return (w & 0x04) != 0;
-  case 2:
-    return (w & 0x02) != 0;
-  case 3:
-    return (w & 0x01) != 0;
-  }
-
-  return true;
-}
-
 uint8_t determine_turn_op(uint8_t current_dir, uint8_t next_dir) {
   int diff = (next_dir - current_dir + 4) % 4;
 
@@ -74,16 +43,16 @@ uint8_t determine_turn_op(uint8_t current_dir, uint8_t next_dir) {
 }
 
 void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
-  // 1. 初期化 (省略: nx, ny, nd を無効値で埋める)
+  static const uint8_t wall_mask[4] = {0x08, 0x04, 0x02, 0x01};
+
   for (int y = 0; y < 16; y++) {
     for (int x = 0; x < 16; x++) {
       for (int d = 0; d < 4; d++) {
-        wall[y][x][d] = has_wall(x, y, d);
         st[y][x][d].dist = MAX_COST;
         st[y][x][d].visited = false;
-        st[y][x][d].nx = 255;
-        st[y][x][d].ny = 255;
-        st[y][x][d].nd = 4;
+        st[y][x][d].nx = 0xF;
+        st[y][x][d].ny = 0xF;
+        st[y][x][d].nd = 0;
       }
     }
   }
@@ -93,6 +62,7 @@ void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
   for (int i = 0; i < goal_count; i++) {
     uint8_t gx = goals[i].x;
     uint8_t gy = goals[i].y;
+
     for (int d = 0; d < 4; d++) {
       st[gy][gx][d].dist = 0;
       pq_push(gy, gx, d, 0);
@@ -101,19 +71,25 @@ void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
 
   while (!pq_empty()) {
     PQNode u = pq_pop();
+
     if (st[u.y][u.x][u.dir].visited)
       continue;
+
     st[u.y][u.x][u.dir].visited = true;
 
     uint16_t cd = st[u.y][u.x][u.dir].dist;
 
-    // 手前の座標 (px, py) を算出
     int8_t px = u.x - dx[u.dir];
     int8_t py = u.y - dy[u.dir];
 
     if (px < 0 || px >= 16 || py < 0 || py >= 16)
       continue;
-    if (wall[py][px][u.dir])
+
+    uint8_t w = maze_wall[py][px];
+    if (MF.FLAG.SCND)
+      w >>= 4;
+
+    if (w & wall_mask[u.dir])
       continue;
 
     for (uint8_t pdir = 0; pdir < 4; pdir++) {
@@ -121,68 +97,75 @@ void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
 
       if (nd < st[py][px][pdir].dist) {
         st[py][px][pdir].dist = nd;
-        // 「(py, px, pdir) にいるなら、次は (u.y, u.x, u.dir) へ行け」と記録
+
         st[py][px][pdir].ny = u.y;
         st[py][px][pdir].nx = u.x;
         st[py][px][pdir].nd = u.dir;
+
         pq_push(py, px, pdir, nd);
       }
     }
   }
 }
 
-// 引数を「マウスの現在地」に変更！
 void make_route_dijkstra(uint8_t start_y, uint8_t start_x, uint8_t start_dir) {
   uint8_t x = start_x;
   uint8_t y = start_y;
   uint8_t dir = start_dir;
   int r_idx = 0;
 
-  // distが0（ゴール）になるまで、記録された「次の状態」を数珠つなぎに辿る
   while (st[y][x][dir].dist > 0 && r_idx < 500) {
-    // 現在の状態に記録されている「次に行くべき状態」を取り出す
     uint8_t next_x = st[y][x][dir].nx;
     uint8_t next_y = st[y][x][dir].ny;
     uint8_t next_dir = st[y][x][dir].nd;
 
-    // 次の状態が見つからない（未探索領域など）場合は終了
-    if (next_x == 255 || (next_x == x && next_y == y && next_dir == dir)) {
+    if (next_x == 0xF || (next_x == x && next_y == y && next_dir == dir)) {
       break;
     }
 
-    // アクションの決定
     if (dir == next_dir) {
-      // 向きが変わらない移動：直進スラローム
-      route[r_idx++] = 0x88; // OP_FORWARD
+      route[r_idx++] = 0x88;
     } else {
-      // 向きが変わる移動：旋回スラローム
       route[r_idx++] = determine_turn_op(dir, next_dir);
     }
 
-    // 状態を更新して次のステップへ
     x = next_x;
     y = next_y;
     dir = next_dir;
   }
-  route[r_idx] = 0xFF; // 終端記号
+  route[r_idx] = 0xFF;
 }
 
 void dump_dijkstra_map(uint8_t my, uint8_t mx, uint8_t md) {
+  static const uint8_t wall_mask[4] = {0x08, 0x04, 0x02, 0x01};
+
   printf("\r\n=== WALL + COST MAP (S=Start/Pos, G=Goal) ===\r\n");
 
   for (int y = 15; y >= 0; y--) {
-    // --- 上側の壁表示 ---
+    /* --- 上側（北壁） --- */
     for (int x = 0; x < 16; x++) {
       printf("+");
-      printf(has_wall(x, y, 0) ? "---" : "   ");
+
+      uint8_t w = maze_wall[y][x];
+      if (MF.FLAG.SCND)
+        w >>= 4;
+
+      printf((w & wall_mask[0]) ? "---" : "   ");
     }
     printf("+\r\n");
 
-    // --- セル内部と横の壁表示 ---
+    /* --- セル内部と西壁 --- */
     for (int x = 0; x < 16; x++) {
-      printf(has_wall(x, y, 3) ? "|" : " ");
+      uint8_t w = maze_wall[y][x];
+      if (MF.FLAG.SCND)
+        w >>= 4;
 
-      // 1. ゴール判定
+      /* 西壁 dir=3 */
+      printf((w & wall_mask[3]) ? "|" : " ");
+
+      /* --- 中身表示 --- */
+
+      /* ゴール判定 */
       bool is_goal = false;
       for (int i = 0; i < GOAL_NUM; i++) {
         if (x == goals[i].x && y == goals[i].y) {
@@ -192,20 +175,21 @@ void dump_dijkstra_map(uint8_t my, uint8_t mx, uint8_t md) {
       }
 
       if (is_goal) {
-        printf(" G "); // ゴール地点
+        printf(" G ");
       }
-      // 2. 現在地判定（向きを矢印で表示）
+      /* 現在地（矢印） */
       else if (x == mx && y == my) {
         const char *arrows[4] = {" ^ ", " > ", " v ", " < "};
         printf("%s", arrows[md]);
       }
-      // 3. 通常のコスト表示
+      /* コスト表示 */
       else {
         uint16_t best = MAX_COST;
         for (int d = 0; d < 4; d++) {
           if (st[y][x][d].dist < best)
             best = st[y][x][d].dist;
         }
+
         if (best == MAX_COST)
           printf(" --");
         else
@@ -213,11 +197,17 @@ void dump_dijkstra_map(uint8_t my, uint8_t mx, uint8_t md) {
       }
     }
 
-    // 右端の壁
-    printf(has_wall(15, y, 1) ? "|\r\n" : " \r\n");
+    /* --- 右端（東壁） --- */
+    {
+      uint8_t w = maze_wall[y][15];
+      if (MF.FLAG.SCND)
+        w >>= 4;
+
+      printf((w & wall_mask[1]) ? "|\r\n" : " \r\n");
+    }
   }
 
-  // --- 最下段の壁 ---
+  /* --- 最下段 --- */
   for (int x = 0; x < 16; x++)
     printf("+---");
   printf("+\r\n");
@@ -242,49 +232,4 @@ void dump_route_dijkstra(void) {
   }
 
   printf("END\r\n");
-}
-
-void dump_path_on_map(uint8_t sy, uint8_t sx, uint8_t gy, uint8_t gx) {
-  char mark[16][16] = {0};
-
-  int8_t goal_dir = 0;
-  uint16_t best = MAX_COST;
-
-  for (int d = 0; d < 4; d++) {
-    if (st[gy][gx][d].dist < best) {
-      best = st[gy][gx][d].dist;
-      goal_dir = d;
-    }
-  }
-
-  int x = gx, y = gy, dir = goal_dir;
-
-  while (st[y][x][dir].dist > 0) {
-    mark[y][x] = '*';
-
-    int pd = st[y][x][dir].nd;
-    if (pd < 0)
-      break;
-
-    static const int dx[4] = {0, 1, 0, -1};
-    static const int dy[4] = {1, 0, -1, 0};
-
-    x -= dx[pd];
-    y -= dy[pd];
-    dir = pd;
-  }
-
-  mark[sy][sx] = 'S';
-  mark[gy][gx] = 'G';
-
-  printf("\r\n=== PATH MAP ===\r\n");
-  for (int yy = 15; yy >= 0; yy--) {
-    for (int xx = 0; xx < 16; xx++) {
-      char c = mark[yy][xx];
-      if (c == 0)
-        c = '.';
-      printf("%c ", c);
-    }
-    printf("\r\n");
-  }
 }
