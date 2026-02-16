@@ -7,11 +7,9 @@ void pq_init(void) { pq_count = 0; }
 
 void pq_push(uint8_t y, uint8_t x, uint8_t dir, uint16_t dist) {
   if (pq_count >= PQ_SIZE) {
-    // エラー処理（キュー溢れ）
     return;
   }
 
-  // 末尾に追加
   int idx = pq_count;
   pq[idx].y = y;
   pq[idx].x = x;
@@ -19,13 +17,10 @@ void pq_push(uint8_t y, uint8_t x, uint8_t dir, uint16_t dist) {
   pq[idx].dist = dist;
   pq_count++;
 
-  // ヒープアップ（親より小さければ交換）
   while (idx > 0) {
     int parent = (idx - 1) / 2;
     if (pq[parent].dist <= pq[idx].dist)
       break;
-
-    // 交換
     PQNode temp = pq[parent];
     pq[parent] = pq[idx];
     pq[idx] = temp;
@@ -40,12 +35,9 @@ PQNode pq_pop(void) {
 
   PQNode ret = pq[0];
 
-  // 末尾を先頭に移動
   pq_count--;
   if (pq_count > 0) {
     pq[0] = pq[pq_count];
-
-    // ヒープダウン（子より大きければ交換）
     int idx = 0;
     while (1) {
       int left = 2 * idx + 1;
@@ -60,7 +52,6 @@ PQNode pq_pop(void) {
       if (smallest == idx)
         break;
 
-      // 交換
       PQNode temp = pq[idx];
       pq[idx] = pq[smallest];
       pq[smallest] = temp;

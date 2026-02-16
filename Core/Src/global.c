@@ -1,5 +1,7 @@
 #include "global.h"
 
+volatile long count = 0;
+
 // Snapshot
 volatile mouse_flag_t MF;
 
@@ -22,7 +24,8 @@ volatile SpeedController_t target_speed;
 
 volatile LEDinfo LC;
 
-volatile uint16_t route[256];
+volatile uint8_t route[512];
 volatile uint16_t smap[16][16];
 volatile uint8_t maze_wall[16][16];
+volatile bool wall[16][16][4];
 /* USER CODE BEGIN 0 */

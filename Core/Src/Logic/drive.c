@@ -15,10 +15,13 @@ void drive_calc_offset(float dist) {
   while (current_position.dist < dist) {
     if (done) {
       conf_route_dijkstra();
+      done = 0;
     }
   }
   drive_stop();
   MF.FLAG.CALC_OFFSET = 1;
+
+  printf("%d\r\n", count);
 }
 
 void half_sectionA(void) {

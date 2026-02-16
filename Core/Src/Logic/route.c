@@ -73,7 +73,7 @@ void make_route() {
 
   uint16_t i;
   for (i = 0; i < 256; i++) {
-    route[i] = 0xffff;
+    route[i] = 0xff;
   }
 
   uint8_t m_step = smap[mouse.y][mouse.x];

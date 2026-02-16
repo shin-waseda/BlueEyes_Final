@@ -7,22 +7,33 @@
 
 MazePosition goals[GOAL_NUM] = {{GOAL_X, GOAL_Y}};
 
-typedef enum {
-  OP_NONE = 0,
-  OP_FORWARD,
-  OP_TURN_RIGHT,
-  OP_TURN_LEFT,
-  OP_TURN_180
-} PrevOp;
+// typedef enum {
+//   OP_NONE = 0,
+//   OP_FORWARD,
+//   OP_TURN_RIGHT,
+//   OP_TURN_LEFT,
+//   OP_TURN_180
+// } PrevOp;
+
+static const uint8_t turn_cost[4][4] = {
+    /* pdir\udir */
+    {0, 7, 100, 7},
+    {7, 0, 7, 100},
+    {100, 7, 0, 7},
+    {7, 100, 7, 0}};
 
 typedef struct {
-  uint16_t dist;
-  uint8_t prev_dir : 3;
-  uint8_t prev_op : 3;
-  uint8_t visited : 1;
-} __attribute__((packed)) State;
+  uint16_t dist;        // 0 ~ 65535 (2byte)
+  uint32_t nx : 4;      // 0 ~ 15 (4bit)
+  uint32_t ny : 4;      // 0 ~ 15 (4bit)
+  uint32_t nd : 2;      // 0 ~ 3  (2bit)
+  uint32_t visited : 1; // 0 or 1 (1bit)
+  uint32_t padding : 5; // 合計32bit(4byte)になるように調整
+} State;
 
-static State st[16][16][4];
+State st[16][16][4];
+static const int8_t dx[4] = {0, 1, 0, -1};
+static const int8_t dy[4] = {1, 0, -1, 0};
 
 static bool has_wall(int8_t x, int8_t y, uint8_t dir) {
   if (x < 0 || x > 15 || y < 0 || y > 15)
@@ -46,24 +57,38 @@ static bool has_wall(int8_t x, int8_t y, uint8_t dir) {
 
   return true;
 }
-// 1. 無効値の定義
-#define DIR_NONE 7
+
+uint8_t determine_turn_op(uint8_t current_dir, uint8_t next_dir) {
+  int diff = (next_dir - current_dir + 4) % 4;
+
+  switch (diff) {
+  case 1:
+    return 0x44;
+  case 3:
+    return 0x11;
+  case 2:
+    return 0x22;
+  default:
+    return 0x00;
+  }
+}
 
 void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
+  // 1. 初期化 (省略: nx, ny, nd を無効値で埋める)
   for (int y = 0; y < 16; y++) {
     for (int x = 0; x < 16; x++) {
       for (int d = 0; d < 4; d++) {
+        wall[y][x][d] = has_wall(x, y, d);
         st[y][x][d].dist = MAX_COST;
         st[y][x][d].visited = false;
-        st[y][x][d].prev_dir = DIR_NONE; // -1 の代わりに 7
-        st[y][x][d].prev_op = OP_NONE;
+        st[y][x][d].nx = 255;
+        st[y][x][d].ny = 255;
+        st[y][x][d].nd = 4;
       }
     }
   }
 
   pq_init();
-  static const int8_t dx[4] = {0, 1, 0, -1};
-  static const int8_t dy[4] = {1, 0, -1, 0};
 
   for (int i = 0; i < goal_count; i++) {
     uint8_t gx = goals[i].x;
@@ -82,38 +107,25 @@ void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
 
     uint16_t cd = st[u.y][u.x][u.dir].dist;
 
-    for (uint8_t move_dir = 0; move_dir < 4; move_dir++) {
-      int px = u.x - dx[move_dir];
-      int py = u.y - dy[move_dir];
+    // 手前の座標 (px, py) を算出
+    int8_t px = u.x - dx[u.dir];
+    int8_t py = u.y - dy[u.dir];
 
-      if (px < 0 || px >= 16 || py < 0 || py >= 16)
-        continue;
-      if (has_wall(px, py, move_dir))
-        continue;
+    if (px < 0 || px >= 16 || py < 0 || py >= 16)
+      continue;
+    if (wall[py][px][u.dir])
+      continue;
 
-      // 遷移コストの設定
-      uint16_t nd;
-      PrevOp op;
+    for (uint8_t pdir = 0; pdir < 4; pdir++) {
+      uint16_t nd = cd + 1 + turn_cost[pdir][u.dir];
 
-      if (move_dir == u.dir) {
-        nd = cd + 1;
-        op = OP_FORWARD;
-      } else if (move_dir == (u.dir + 3) % 4) {
-        nd = cd + 7;
-        op = OP_TURN_RIGHT;
-      } else if (move_dir == (u.dir + 1) % 4) {
-        nd = cd + 7;
-        op = OP_TURN_LEFT;
-      } else {
-        nd = cd + 100;
-        op = OP_TURN_180;
-      }
-
-      if (nd < st[py][px][move_dir].dist) {
-        st[py][px][move_dir].dist = nd;
-        st[py][px][move_dir].prev_dir = u.dir;
-        st[py][px][move_dir].prev_op = op;
-        pq_push(py, px, move_dir, nd);
+      if (nd < st[py][px][pdir].dist) {
+        st[py][px][pdir].dist = nd;
+        // 「(py, px, pdir) にいるなら、次は (u.y, u.x, u.dir) へ行け」と記録
+        st[py][px][pdir].ny = u.y;
+        st[py][px][pdir].nx = u.x;
+        st[py][px][pdir].nd = u.dir;
+        pq_push(py, px, pdir, nd);
       }
     }
   }
@@ -121,99 +133,97 @@ void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
 
 // 引数を「マウスの現在地」に変更！
 void make_route_dijkstra(uint8_t start_y, uint8_t start_x, uint8_t start_dir) {
-  for (int i = 0; i < 512; i++)
-    route[i] = 0xFF;
-
-  int r_idx = 0;
   uint8_t x = start_x;
   uint8_t y = start_y;
   uint8_t dir = start_dir;
+  int r_idx = 0;
 
-  static const int8_t dx[4] = {0, 1, 0, -1};
-  static const int8_t dy[4] = {1, 0, -1, 0};
+  // distが0（ゴール）になるまで、記録された「次の状態」を数珠つなぎに辿る
+  while (st[y][x][dir].dist > 0 && r_idx < 500) {
+    // 現在の状態に記録されている「次に行くべき状態」を取り出す
+    uint8_t next_x = st[y][x][dir].nx;
+    uint8_t next_y = st[y][x][dir].ny;
+    uint8_t next_dir = st[y][x][dir].nd;
 
-  // コストが 0（ゴール）になるまで、記録された prev ポインタを順に辿る
-  // ゴールから探索を広げたので、prev は自動的にゴールへの道順になっている
-  while (st[y][x][dir].dist > 0) {
-    uint8_t op = st[y][x][dir].prev_op;
-    uint8_t next_dir = st[y][x][dir].prev_dir;
-
-    if (next_dir == DIR_NONE)
-      break;
-
-    switch (op) {
-    case OP_FORWARD:
-      route[r_idx++] = 0x88;
-      break;
-    case OP_TURN_RIGHT:
-      route[r_idx++] = 0x44;
-      break;
-    case OP_TURN_LEFT:
-      route[r_idx++] = 0x11;
-      break;
-    case OP_TURN_180:
-      route[r_idx++] = 0x22;
-      break;
-    default:
+    // 次の状態が見つからない（未探索領域など）場合は終了
+    if (next_x == 255 || (next_x == x && next_y == y && next_dir == dir)) {
       break;
     }
 
-    // 次の座標へ（探索時とは逆に、dxを足して進む）
-    x += dx[dir];
-    y += dy[dir];
-    dir = next_dir;
+    // アクションの決定
+    if (dir == next_dir) {
+      // 向きが変わらない移動：直進スラローム
+      route[r_idx++] = 0x88; // OP_FORWARD
+    } else {
+      // 向きが変わる移動：旋回スラローム
+      route[r_idx++] = determine_turn_op(dir, next_dir);
+    }
 
-    if (r_idx >= 511)
-      break;
+    // 状態を更新して次のステップへ
+    x = next_x;
+    y = next_y;
+    dir = next_dir;
   }
-  route[r_idx] = 0xFF;
+  route[r_idx] = 0xFF; // 終端記号
 }
 
-void dump_wall_cost_map(void) {
-  printf("\r\n=== WALL + COST MAP ===\r\n");
+void dump_dijkstra_map(uint8_t my, uint8_t mx, uint8_t md) {
+  printf("\r\n=== WALL + COST MAP (S=Start/Pos, G=Goal) ===\r\n");
 
   for (int y = 15; y >= 0; y--) {
+    // --- 上側の壁表示 ---
     for (int x = 0; x < 16; x++) {
       printf("+");
-      if (has_wall(x, y, 0))
-        printf("---");
-      else
-        printf("   ");
+      printf(has_wall(x, y, 0) ? "---" : "   ");
     }
     printf("+\r\n");
 
+    // --- セル内部と横の壁表示 ---
     for (int x = 0; x < 16; x++) {
-      if (has_wall(x, y, 3))
-        printf("|");
-      else
-        printf(" ");
+      printf(has_wall(x, y, 3) ? "|" : " ");
 
-      uint16_t best = MAX_COST;
-      for (int d = 0; d < 4; d++) {
-        if (st[y][x][d].dist < best)
-          best = st[y][x][d].dist;
+      // 1. ゴール判定
+      bool is_goal = false;
+      for (int i = 0; i < GOAL_NUM; i++) {
+        if (x == goals[i].x && y == goals[i].y) {
+          is_goal = true;
+          break;
+        }
       }
 
-      if (best == MAX_COST)
-        printf(" --");
-      else
-        printf("%3d", best);
+      if (is_goal) {
+        printf(" G "); // ゴール地点
+      }
+      // 2. 現在地判定（向きを矢印で表示）
+      else if (x == mx && y == my) {
+        const char *arrows[4] = {" ^ ", " > ", " v ", " < "};
+        printf("%s", arrows[md]);
+      }
+      // 3. 通常のコスト表示
+      else {
+        uint16_t best = MAX_COST;
+        for (int d = 0; d < 4; d++) {
+          if (st[y][x][d].dist < best)
+            best = st[y][x][d].dist;
+        }
+        if (best == MAX_COST)
+          printf(" --");
+        else
+          printf("%3d", best);
+      }
     }
 
-    if (has_wall(15, y, 1))
-      printf("|");
-    else
-      printf(" ");
-
-    printf("\r\n");
+    // 右端の壁
+    printf(has_wall(15, y, 1) ? "|\r\n" : " \r\n");
   }
 
+  // --- 最下段の壁 ---
   for (int x = 0; x < 16; x++)
     printf("+---");
   printf("+\r\n");
 }
 
-void dump_route(void) {
+void dump_route_dijkstra(void) {
   printf("\r\n=== ROUTE ACTIONS ===\r\n");
 
   for (int i = 0; route[i] != 0xFF; i++) {
@@ -252,7 +262,7 @@ void dump_path_on_map(uint8_t sy, uint8_t sx, uint8_t gy, uint8_t gx) {
   while (st[y][x][dir].dist > 0) {
     mark[y][x] = '*';
 
-    int pd = st[y][x][dir].prev_dir;
+    int pd = st[y][x][dir].nd;
     if (pd < 0)
       break;
 

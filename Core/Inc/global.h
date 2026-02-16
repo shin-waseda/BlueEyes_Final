@@ -85,7 +85,10 @@ extern volatile uint8_t goal_y;
 extern volatile uint8_t maze_wall[16][16];
 extern volatile uint16_t smap[16][16];
 extern volatile bool tmap[16][16];
-extern volatile uint16_t route[256];
+extern volatile bool wall[16][16][4];
+extern volatile uint8_t route[512];
 extern volatile uint16_t r_cnt;
+
+extern volatile long count;
 
 #endif /* GLOBAL_H */

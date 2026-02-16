@@ -96,11 +96,16 @@ void test_drive(void);
 #define DIR_TURN_R90 0x01
 #define DIR_TURN_L90 0xff
 #define DIR_TURN_180 0x02
-void search_init(void);
+extern volatile uint16_t r_cnt;
+void searchB_adachi(bool is_slalom);
+void get_wall(void);
+void write_map(void);
+void conf_route(void);
+void searchB_dijkstra(bool is_slalom);
 void last_run(void);
 void led_pattern_goal(void);
-void dump_wall_cost_map(void);
-void dump_route(void);
+void dump_dijkstra_map(uint8_t my, uint8_t mx, uint8_t md);
+void dump_route_dijkstra(void);
 void dump_path_on_map(uint8_t y, uint8_t x, uint8_t gy, uint8_t gx);
 void drive_calc_offset(float dist);
 

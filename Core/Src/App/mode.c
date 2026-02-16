@@ -75,6 +75,7 @@ uint8_t execute_mode(uint8_t mode) {
 
   case 2:
     select_speed(select_mode(1));
+    current_slalom_profile = select_S90_param(select_mode(1));
     enable_motor();
     MF.FLAG.SCND = 0;
     goal_x = GOAL_X;
@@ -107,12 +108,12 @@ uint8_t execute_mode(uint8_t mode) {
 
     make_smap_adachi();
     make_route();
-    dump_combined_map();
+    dump_adachi_map();
 
     dijkstra_multi_goal(goals, 1);
     make_route_dijkstra(mouse.y, mouse.x, mouse.dir);
-    dump_wall_cost_map();
-    dump_route();
+    dump_dijkstra_map(mouse.y, mouse.x, mouse.dir);
+    dump_route_dijkstra();
     dump_path_on_map(mouse.y, mouse.x, GOAL_Y, GOAL_X);
     break;
   case 6:
@@ -231,6 +232,11 @@ void test_drive(void) {
       break;
     case 3:
       test_slalom();
+      break;
+    case 4:
+      select_speed(select_mode(1));
+      drive_calc_offset(CALC_OFFSET_DIST);
+
       break;
     case 7:
       drive_straight(180, 0, 100);
