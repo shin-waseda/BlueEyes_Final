@@ -51,6 +51,7 @@ extern volatile int16_t OMRpulse_r; // 仮想オドメトリ用 (符号付きに
 
 // led.c
 void led_write(LEDinfo s);
+void led_pattern_search(void);
 
 // intterupt.c
 void tim6_wait_us(uint16_t us);

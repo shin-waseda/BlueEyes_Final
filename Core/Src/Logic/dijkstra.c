@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-MazePosition goals[GOAL_NUM] = {{GOAL_Y, GOAL_X}};
+MazePosition goals[GOAL_NUM] = {{GOAL_X, GOAL_Y}};
 
 typedef enum {
   OP_NONE = 0,
@@ -46,227 +46,127 @@ static bool has_wall(int8_t x, int8_t y, uint8_t dir) {
 
   return true;
 }
+// 1. 無効値の定義
+#define DIR_NONE 7
 
 void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
-  // 初期化
   for (int y = 0; y < 16; y++) {
     for (int x = 0; x < 16; x++) {
       for (int d = 0; d < 4; d++) {
         st[y][x][d].dist = MAX_COST;
         st[y][x][d].visited = false;
-        st[y][x][d].prev_dir = -1;
+        st[y][x][d].prev_dir = DIR_NONE; // -1 の代わりに 7
         st[y][x][d].prev_op = OP_NONE;
       }
     }
   }
 
   pq_init();
-
   static const int8_t dx[4] = {0, 1, 0, -1};
   static const int8_t dy[4] = {1, 0, -1, 0};
 
-  const uint16_t forward_cost = 1;
-  const uint16_t turn90_cost = 7;
-  const uint16_t turn180_cost = 100;
-
-  // Multi-Source（全ゴール dist=0）
   for (int i = 0; i < goal_count; i++) {
     uint8_t gx = goals[i].x;
     uint8_t gy = goals[i].y;
-
     for (int d = 0; d < 4; d++) {
       st[gy][gx][d].dist = 0;
       pq_push(gy, gx, d, 0);
     }
   }
 
-  // ダイクストラ本体：スタートに向かって逆方向に探索
   while (!pq_empty()) {
     PQNode u = pq_pop();
-
     if (st[u.y][u.x][u.dir].visited)
       continue;
-
     st[u.y][u.x][u.dir].visited = true;
 
     uint16_t cd = st[u.y][u.x][u.dir].dist;
 
-    /* ============================
-       逆遷移：FORWARD
-       prev_dir = curr_dir （スタート時も同じ向き）
-    ============================ */
-    {
-      uint8_t prev_dir = u.dir;
+    for (uint8_t move_dir = 0; move_dir < 4; move_dir++) {
+      int px = u.x - dx[move_dir];
+      int py = u.y - dy[move_dir];
 
-      int px = u.x - dx[u.dir];
-      int py = u.y - dy[u.dir];
+      if (px < 0 || px >= 16 || py < 0 || py >= 16)
+        continue;
+      if (has_wall(px, py, move_dir))
+        continue;
 
-      if (px >= 0 && px < 16 && py >= 0 && py < 16) {
-        // (px,py)から u.dir方向に進んで(u.x,u.y)に到達できるか
-        if (!has_wall(px, py, u.dir)) {
-          uint8_t back = (u.dir + 2) % 4;
-          if (!has_wall(u.x, u.y, back)) {
-            uint16_t nd = cd + forward_cost;
+      // 遷移コストの設定
+      uint16_t nd;
+      PrevOp op;
 
-            if (nd < st[py][px][prev_dir].dist) {
-              st[py][px][prev_dir].dist = nd;
-              st[py][px][prev_dir].prev_dir = u.dir;
-              st[py][px][prev_dir].prev_op = OP_FORWARD;
-              pq_push(py, px, prev_dir, nd);
-            }
-          }
-        }
+      if (move_dir == u.dir) {
+        nd = cd + 1;
+        op = OP_FORWARD;
+      } else if (move_dir == (u.dir + 3) % 4) {
+        nd = cd + 7;
+        op = OP_TURN_RIGHT;
+      } else if (move_dir == (u.dir + 1) % 4) {
+        nd = cd + 7;
+        op = OP_TURN_LEFT;
+      } else {
+        nd = cd + 100;
+        op = OP_TURN_180;
       }
-    }
 
-    /* ============================
-       逆遷移：TURN_RIGHT
-       (u.dir + 1) % 4 = 右折後の向き
-       prev_dir = (u.dir + 3) % 4 = 元の向き
-    ============================ */
-    {
-      uint8_t prev_dir = (u.dir + 3) % 4;
-
-      int px = u.x - dx[u.dir];
-      int py = u.y - dy[u.dir];
-
-      if (px >= 0 && px < 16 && py >= 0 && py < 16) {
-        // (px,py)から u.dir方向（=右折後）に進んで(u.x,u.y)に到達できるか
-        if (!has_wall(px, py, u.dir)) {
-          uint8_t back = (u.dir + 2) % 4;
-          if (!has_wall(u.x, u.y, back)) {
-            uint16_t nd = cd + turn90_cost;
-
-            if (nd < st[py][px][prev_dir].dist) {
-              st[py][px][prev_dir].dist = nd;
-              st[py][px][prev_dir].prev_dir = u.dir;
-              st[py][px][prev_dir].prev_op = OP_TURN_RIGHT;
-              pq_push(py, px, prev_dir, nd);
-            }
-          }
-        }
-      }
-    }
-
-    /* ============================
-       逆遷移：TURN_LEFT
-       (u.dir + 3) % 4 = 左折後の向き
-       prev_dir = (u.dir + 1) % 4 = 元の向き
-    ============================ */
-    {
-      uint8_t prev_dir = (u.dir + 1) % 4;
-
-      int px = u.x - dx[u.dir];
-      int py = u.y - dy[u.dir];
-
-      if (px >= 0 && px < 16 && py >= 0 && py < 16) {
-        if (!has_wall(px, py, u.dir)) {
-          uint8_t back = (u.dir + 2) % 4;
-          if (!has_wall(u.x, u.y, back)) {
-            uint16_t nd = cd + turn90_cost;
-
-            if (nd < st[py][px][prev_dir].dist) {
-              st[py][px][prev_dir].dist = nd;
-              st[py][px][prev_dir].prev_dir = u.dir;
-              st[py][px][prev_dir].prev_op = OP_TURN_LEFT;
-              pq_push(py, px, prev_dir, nd);
-            }
-          }
-        }
-      }
-    }
-
-    /* ============================
-       逆遷移：TURN_180
-       (u.dir + 2) % 4 = 180度後の向き
-       prev_dir = (u.dir + 2) % 4 = 元の向き
-    ============================ */
-    {
-      uint8_t prev_dir = (u.dir + 2) % 4;
-
-      int px = u.x - dx[u.dir];
-      int py = u.y - dy[u.dir];
-
-      if (px >= 0 && px < 16 && py >= 0 && py < 16) {
-        if (!has_wall(px, py, u.dir)) {
-          uint8_t back = (u.dir + 2) % 4;
-          if (!has_wall(u.x, u.y, back)) {
-            uint16_t nd = cd + turn180_cost;
-
-            if (nd < st[py][px][prev_dir].dist) {
-              st[py][px][prev_dir].dist = nd;
-              st[py][px][prev_dir].prev_dir = u.dir;
-              st[py][px][prev_dir].prev_op = OP_TURN_180;
-              pq_push(py, px, prev_dir, nd);
-            }
-          }
-        }
+      if (nd < st[py][px][move_dir].dist) {
+        st[py][px][move_dir].dist = nd;
+        st[py][px][move_dir].prev_dir = u.dir;
+        st[py][px][move_dir].prev_op = op;
+        pq_push(py, px, move_dir, nd);
       }
     }
   }
 }
 
-void make_route_dijkstra(uint8_t goal_y, uint8_t goal_x) {
+// 引数を「マウスの現在地」に変更！
+void make_route_dijkstra(uint8_t start_y, uint8_t start_x, uint8_t start_dir) {
   for (int i = 0; i < 512; i++)
     route[i] = 0xFF;
 
-  uint16_t best = MAX_COST;
-  int8_t dir_goal = -1;
-
-  for (int d = 0; d < 4; d++) {
-    if (st[goal_y][goal_x][d].dist < best) {
-      best = st[goal_y][goal_x][d].dist;
-      dir_goal = d;
-    }
-  }
-
-  if (dir_goal == -1)
-    return;
+  int r_idx = 0;
+  uint8_t x = start_x;
+  uint8_t y = start_y;
+  uint8_t dir = start_dir;
 
   static const int8_t dx[4] = {0, 1, 0, -1};
   static const int8_t dy[4] = {1, 0, -1, 0};
 
-  uint8_t path[512];
-  int idx = 0;
-
-  int8_t x = goal_x;
-  int8_t y = goal_y;
-  int8_t dir = dir_goal;
-
-  while (st[y][x][dir].prev_dir != -1) {
+  // コストが 0（ゴール）になるまで、記録された prev ポインタを順に辿る
+  // ゴールから探索を広げたので、prev は自動的にゴールへの道順になっている
+  while (st[y][x][dir].dist > 0) {
     uint8_t op = st[y][x][dir].prev_op;
-    int8_t pdir = st[y][x][dir].prev_dir;
+    uint8_t next_dir = st[y][x][dir].prev_dir;
+
+    if (next_dir == DIR_NONE)
+      break;
 
     switch (op) {
     case OP_FORWARD:
-      path[idx++] = 0x88;
+      route[r_idx++] = 0x88;
       break;
     case OP_TURN_RIGHT:
-      path[idx++] = 0x44;
+      route[r_idx++] = 0x44;
       break;
     case OP_TURN_LEFT:
-      path[idx++] = 0x11;
+      route[r_idx++] = 0x11;
       break;
     case OP_TURN_180:
-      path[idx++] = 0x22;
+      route[r_idx++] = 0x22;
       break;
     default:
       break;
     }
 
-    dir = pdir;
-    x -= dx[dir];
-    y -= dy[dir];
+    // 次の座標へ（探索時とは逆に、dxを足して進む）
+    x += dx[dir];
+    y += dy[dir];
+    dir = next_dir;
 
-    if (idx >= 511)
+    if (r_idx >= 511)
       break;
   }
-
-  int r = 0;
-  while (idx > 0) {
-    route[r++] = path[--idx];
-  }
-  route[r] = 0xFF;
+  route[r_idx] = 0xFF;
 }
 
 void dump_wall_cost_map(void) {

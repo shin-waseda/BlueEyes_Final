@@ -114,8 +114,8 @@ extern MazePosition goals[GOAL_NUM];
 
 #define MAX_COST 0xFFFF
 void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count);
-void make_route_dijkstra(/*uint8_t start_y, uint8_t start_x, uint8_t start_dir,*/
-                         uint8_t goal_y, uint8_t goal_x);
+void make_route_dijkstra(uint8_t start_y, uint8_t start_x, uint8_t start_dir/*,
+                         uint8_t goal_y, uint8_t goal_x*/);
 
 // priority_queue.c
 #define PQ_SIZE 256
