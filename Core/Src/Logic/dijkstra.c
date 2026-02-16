@@ -29,39 +29,42 @@ static bool has_wall(int8_t x, int8_t y, uint8_t dir) {
 
   uint8_t w = maze_wall[y][x];
 
+  if (MF.FLAG.SCND)
+    w >>= 4;
+
   switch (dir) {
-  case 0: // 北
-    return (w & 0x88) != 0;
-  case 1: // 東
-    return (w & 0x44) != 0;
-  case 2: // 南
-    return (w & 0x22) != 0;
-  case 3: // 西
-    return (w & 0x11) != 0;
+  case 0:
+    return (w & 0x08) != 0; // 北
+  case 1:
+    return (w & 0x04) != 0; // 東
+  case 2:
+    return (w & 0x02) != 0; // 南
+  case 3:
+    return (w & 0x01) != 0; // 西
   }
 
   return true;
 }
 
-void dijkstra(uint8_t start_x, uint8_t start_y, uint8_t start_dir,
-              uint8_t goal_x_, uint8_t goal_y_) {
+void dijkstra(uint8_t start_y, uint8_t start_x, uint8_t start_dir,
+              uint8_t goal_y_, uint8_t goal_x_) {
 
   // 初期化
-  for (int x = 0; x < 16; x++) {
-    for (int y = 0; y < 16; y++) {
+  for (int y = 0; y < 16; y++) {
+    for (int x = 0; x < 16; x++) {
       for (int d = 0; d < 4; d++) {
-        st[x][y][d].dist = MAX_COST;
-        st[x][y][d].visited = false;
-        st[x][y][d].prev_dir = -1;
-        st[x][y][d].prev_op = OP_NONE;
+        st[y][x][d].dist = MAX_COST;
+        st[y][x][d].visited = false;
+        st[y][x][d].prev_dir = -1;
+        st[y][x][d].prev_op = OP_NONE;
       }
     }
   }
 
   pq_init();
 
-  st[start_x][start_y][start_dir].dist = 0;
-  pq_push(start_x, start_y, start_dir, 0);
+  st[start_y][start_x][start_dir].dist = 0;
+  pq_push(start_y, start_x, start_dir, 0);
 
   const int8_t dx[4] = {0, 1, 0, -1};
   const int8_t dy[4] = {1, 0, -1, 0};
@@ -74,11 +77,11 @@ void dijkstra(uint8_t start_x, uint8_t start_y, uint8_t start_dir,
   while (!pq_empty()) {
     PQNode u = pq_pop();
 
-    if (st[u.x][u.y][u.dir].visited)
+    if (st[u.y][u.x][u.dir].visited)
       continue;
-    st[u.x][u.y][u.dir].visited = true;
+    st[u.y][u.x][u.dir].visited = true;
 
-    uint16_t current_dist = st[u.x][u.y][u.dir].dist;
+    uint16_t current_dist = st[u.y][u.x][u.dir].dist;
 
     // スラロームモデル：すべての遷移で「回転しながら前進」
     // 1. 直進（向きそのまま）
@@ -89,11 +92,11 @@ void dijkstra(uint8_t start_x, uint8_t start_y, uint8_t start_dir,
       if (nx >= 0 && nx <= 15 && ny >= 0 && ny <= 15) {
         uint16_t new_dist = current_dist + forward_cost;
 
-        if (new_dist < st[nx][ny][u.dir].dist) {
-          st[nx][ny][u.dir].dist = new_dist;
-          st[nx][ny][u.dir].prev_dir = u.dir;
-          st[nx][ny][u.dir].prev_op = OP_FORWARD;
-          pq_push(nx, ny, u.dir, new_dist);
+        if (new_dist < st[ny][nx][u.dir].dist) {
+          st[ny][nx][u.dir].dist = new_dist;
+          st[ny][nx][u.dir].prev_dir = u.dir;
+          st[ny][nx][u.dir].prev_op = OP_FORWARD;
+          pq_push(ny, nx, u.dir, new_dist);
         }
       }
     }
@@ -107,11 +110,11 @@ void dijkstra(uint8_t start_x, uint8_t start_y, uint8_t start_dir,
       if (nx >= 0 && nx <= 15 && ny >= 0 && ny <= 15) {
         uint16_t new_dist = current_dist + turn_90_cost;
 
-        if (new_dist < st[nx][ny][right_dir].dist) {
-          st[nx][ny][right_dir].dist = new_dist;
-          st[nx][ny][right_dir].prev_dir = u.dir;
-          st[nx][ny][right_dir].prev_op = OP_TURN_RIGHT;
-          pq_push(nx, ny, right_dir, new_dist);
+        if (new_dist < st[ny][nx][right_dir].dist) {
+          st[ny][nx][right_dir].dist = new_dist;
+          st[ny][nx][right_dir].prev_dir = u.dir;
+          st[ny][nx][right_dir].prev_op = OP_TURN_RIGHT;
+          pq_push(ny, nx, right_dir, new_dist);
         }
       }
     }
@@ -125,11 +128,11 @@ void dijkstra(uint8_t start_x, uint8_t start_y, uint8_t start_dir,
       if (nx >= 0 && nx <= 15 && ny >= 0 && ny <= 15) {
         uint16_t new_dist = current_dist + turn_90_cost;
 
-        if (new_dist < st[nx][ny][left_dir].dist) {
-          st[nx][ny][left_dir].dist = new_dist;
-          st[nx][ny][left_dir].prev_dir = u.dir;
-          st[nx][ny][left_dir].prev_op = OP_TURN_LEFT;
-          pq_push(nx, ny, left_dir, new_dist);
+        if (new_dist < st[ny][nx][left_dir].dist) {
+          st[ny][nx][left_dir].dist = new_dist;
+          st[ny][nx][left_dir].prev_dir = u.dir;
+          st[ny][nx][left_dir].prev_op = OP_TURN_LEFT;
+          pq_push(ny, nx, left_dir, new_dist);
         }
       }
     }
@@ -143,24 +146,26 @@ void dijkstra(uint8_t start_x, uint8_t start_y, uint8_t start_dir,
       if (nx >= 0 && nx <= 15 && ny >= 0 && ny <= 15) {
         uint16_t new_dist = current_dist + turn_180_cost;
 
-        if (new_dist < st[nx][ny][back_dir].dist) {
-          st[nx][ny][back_dir].dist = new_dist;
-          st[nx][ny][back_dir].prev_dir = u.dir;
-          st[nx][ny][back_dir].prev_op = OP_TURN_180;
-          pq_push(nx, ny, back_dir, new_dist);
+        if (new_dist < st[ny][nx][back_dir].dist) {
+          st[ny][nx][back_dir].dist = new_dist;
+          st[ny][nx][back_dir].prev_dir = u.dir;
+          st[ny][nx][back_dir].prev_op = OP_TURN_180;
+          pq_push(ny, nx, back_dir, new_dist);
         }
       }
     }
   }
 }
 
-void make_route_dijkstra(uint8_t goal_x_, uint8_t goal_y_) {
+void make_route_dijkstra(uint8_t goal_y_, uint8_t goal_x_) {
+  for (int i = 0; i < 512; i++)
+    route[i] = 0xFF;
   uint16_t min_goal_dist = MAX_COST;
   int8_t goal_dir = -1;
 
   for (int d = 0; d < 4; d++) {
-    if (st[goal_x_][goal_y_][d].dist < min_goal_dist) {
-      min_goal_dist = st[goal_x_][goal_y_][d].dist;
+    if (st[goal_y_][goal_x_][d].dist < min_goal_dist) {
+      min_goal_dist = st[goal_y_][goal_x_][d].dist;
       goal_dir = d;
     }
   }
@@ -180,9 +185,13 @@ void make_route_dijkstra(uint8_t goal_x_, uint8_t goal_y_) {
   const int8_t dy[4] = {1, 0, -1, 0};
 
   // スラロームモデル：すべての遷移で座標が変化する
-  while (st[curr_x][curr_y][curr_dir].dist > 0) {
-    uint8_t op = st[curr_x][curr_y][curr_dir].prev_op;
-    int8_t prev_dir = st[curr_x][curr_y][curr_dir].prev_dir;
+  while (st[curr_y][curr_x][curr_dir].dist > 0) {
+    // printf("BACK (%d,%d,%d) dist=%d op=%d prev_dir=%d\r\n", curr_x, curr_y,
+    //        curr_dir, st[curr_x][curr_y][curr_dir].dist,
+    //        st[curr_x][curr_y][curr_dir].prev_op,
+    //        st[curr_x][curr_y][curr_dir].prev_dir);
+    uint8_t op = st[curr_y][curr_x][curr_dir].prev_op;
+    int8_t prev_dir = st[curr_y][curr_x][curr_dir].prev_dir;
 
     if (prev_dir == -1)
       break;
@@ -215,67 +224,54 @@ void make_route_dijkstra(uint8_t goal_x_, uint8_t goal_y_) {
   route[r_i] = 0xFF;
 }
 
-#include "global.h"
-#include "interface.h"
-#include "logic.h"
-#include "params.h"
-
-void dump_walls(void) {
-  printf("\r\n=== WALL MAP ===\r\n");
+void dump_wall_cost_map(void) {
+  printf("\r\n=== WALL + COST MAP ===\r\n");
 
   for (int y = 15; y >= 0; y--) {
-    /* 上壁 */
+    /* --- 上壁行 --- */
     for (int x = 0; x < 16; x++) {
       printf("+");
-      if (has_wall(x, y, 0))
-        printf("---"); // North
+      if (has_wall(x, y, 0)) // North
+        printf("---");
       else
         printf("   ");
     }
     printf("+\r\n");
 
-    /* 左右壁 */
+    /* --- 中身行（左壁 + cost + 右壁） --- */
     for (int x = 0; x < 16; x++) {
+      /* West壁 */
       if (has_wall(x, y, 3))
-        printf("|"); // West
+        printf("|");
       else
         printf(" ");
 
-      printf("   ");
-    }
-
-    /* 右端 */
-    if (has_wall(15, y, 1))
-      printf("|");
-    printf("\r\n");
-  }
-
-  /* 最下段 */
-  for (int x = 0; x < 16; x++) {
-    printf("+---");
-  }
-  printf("+\r\n");
-}
-
-void dump_cost_map(void) {
-  printf("\r\n=== COST MAP (min over dir) ===\r\n");
-
-  for (int y = 15; y >= 0; y--) {
-    for (int x = 0; x < 16; x++) {
+      /* cost表示 */
       uint16_t best = MAX_COST;
-
       for (int d = 0; d < 4; d++) {
-        if (st[x][y][d].dist < best)
-          best = st[x][y][d].dist;
+        if (st[y][x][d].dist < best)
+          best = st[y][x][d].dist;
       }
 
       if (best == MAX_COST)
-        printf(" -- ");
+        printf(" --");
       else
-        printf("%3d ", best);
+        printf("%3d", best);
     }
+
+    /* East壁（右端） */
+    if (has_wall(15, y, 1))
+      printf("|");
+    else
+      printf(" ");
+
     printf("\r\n");
   }
+
+  /* --- 最下段 --- */
+  for (int x = 0; x < 16; x++)
+    printf("+---");
+  printf("+\r\n");
 }
 
 void dump_route(void) {
@@ -299,7 +295,7 @@ void dump_route(void) {
   printf("END\r\n");
 }
 
-void dump_path_on_map(uint8_t sx, uint8_t sy, uint8_t gx, uint8_t gy) {
+void dump_path_on_map(uint8_t sy, uint8_t sx, uint8_t gy, uint8_t gx) {
   char mark[16][16] = {0};
 
   /* ゴールから復元して印を付ける */
@@ -307,18 +303,18 @@ void dump_path_on_map(uint8_t sx, uint8_t sy, uint8_t gx, uint8_t gy) {
   uint16_t best = MAX_COST;
 
   for (int d = 0; d < 4; d++) {
-    if (st[gx][gy][d].dist < best) {
-      best = st[gx][gy][d].dist;
+    if (st[gy][gx][d].dist < best) {
+      best = st[gy][gx][d].dist;
       goal_dir = d;
     }
   }
 
   int x = gx, y = gy, dir = goal_dir;
 
-  while (st[x][y][dir].dist > 0) {
-    mark[x][y] = '*';
+  while (st[y][x][dir].dist > 0) {
+    mark[y][x] = '*';
 
-    int pd = st[x][y][dir].prev_dir;
+    int pd = st[y][x][dir].prev_dir;
     if (pd < 0)
       break;
 
@@ -331,13 +327,13 @@ void dump_path_on_map(uint8_t sx, uint8_t sy, uint8_t gx, uint8_t gy) {
     dir = pd;
   }
 
-  mark[sx][sy] = 'S';
-  mark[gx][gy] = 'G';
+  mark[sy][sx] = 'S';
+  mark[gy][gx] = 'G';
 
   printf("\r\n=== PATH MAP ===\r\n");
   for (int yy = 15; yy >= 0; yy--) {
     for (int xx = 0; xx < 16; xx++) {
-      char c = mark[xx][yy];
+      char c = mark[yy][xx];
       if (c == 0)
         c = '.';
       printf("%c ", c);

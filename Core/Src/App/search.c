@@ -106,7 +106,7 @@ void conf_route_dijkstra(void) {
 
   if (wall_temp & route[r_cnt]) {
     dijkstra(mouse.x, mouse.y, mouse.dir, goal_x, goal_y);
-    make_route_dijkstra(goal_x, goal_y);
+    make_route_dijkstra(goal_y, goal_x);
     r_cnt = 0;
   }
 }
@@ -132,14 +132,21 @@ void searchB_dijkstra(bool is_slalom) {
 
   r_cnt = 0;
   bool first = 1;
-  dijkstra(mouse.x, mouse.y, mouse.dir, goal_x, goal_y);
-  make_route_dijkstra(goal_x, goal_y);
+  dijkstra(mouse.y, mouse.x, mouse.dir, goal_y, goal_x);
+  make_route_dijkstra(goal_y, goal_x);
+  dump_wall_cost_map();
+  dump_route();
+  dump_path_on_map(mouse.y, mouse.x, goal_y, goal_x);
 
   do {
     if (!first) {
       drive_calc_offset(CALC_OFFSET_DIST);
       first = 0;
+      dump_wall_cost_map();
+      dump_route();
+      dump_path_on_map(mouse.y, mouse.x, goal_y, goal_x);
     }
+    printf("%02X ", route[r_cnt]);
     switch (route[r_cnt++]) {
     case 0x88:
       one_sectionU();

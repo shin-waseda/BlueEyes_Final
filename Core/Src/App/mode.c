@@ -82,6 +82,7 @@ uint8_t execute_mode(uint8_t mode) {
 
     start_sequence();
 
+    MF.FLAG.RETURN = 0;
     led_pattern_search();
     searchB_dijkstra(1);
     HAL_Delay(500);
@@ -110,8 +111,7 @@ uint8_t execute_mode(uint8_t mode) {
 
     dijkstra(mouse.x, mouse.y, mouse.dir, GOAL_X, GOAL_Y);
     make_route_dijkstra(GOAL_X, GOAL_Y);
-    dump_walls();
-    dump_cost_map();
+    dump_wall_cost_map();
     dump_route();
     dump_path_on_map(mouse.x, mouse.y, GOAL_X, GOAL_Y);
     break;
@@ -233,7 +233,7 @@ void test_drive(void) {
       test_slalom();
       break;
     case 7:
-      drive_straight(180, 0, 50);
+      drive_straight(180, 0, 100);
       return;
     default:
       return;

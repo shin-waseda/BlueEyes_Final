@@ -5,7 +5,7 @@ static int pq_count = 0;
 
 void pq_init(void) { pq_count = 0; }
 
-void pq_push(uint8_t x, uint8_t y, uint8_t dir, uint16_t dist) {
+void pq_push(uint8_t y, uint8_t x, uint8_t dir, uint16_t dist) {
   if (pq_count >= PQ_SIZE) {
     // エラー処理（キュー溢れ）
     return;
