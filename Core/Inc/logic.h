@@ -123,9 +123,11 @@ typedef struct {
   uint32_t visited : 1; // 0 or 1 (1bit)
   uint32_t padding : 5; // 合計32bit(4byte)になるように調整
 } State;
-
+extern MazePosition goals_quad[4];
+extern bool use_quad_goal;
 extern State st[16][16][4];
 extern MazePosition goals[GOAL_NUM];
+void conf_route_dijkstra(void);
 
 #define MAX_COST 0xFFFF
 void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count);

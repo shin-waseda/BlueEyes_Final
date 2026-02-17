@@ -41,6 +41,6 @@ typedef struct {
 
 // maze.c
 #define GOAL_NUM 1
-#define GOAL_X 1
-#define GOAL_Y 0
+#define GOAL_X 5
+#define GOAL_Y 3
 #endif /* PARAMS_H */

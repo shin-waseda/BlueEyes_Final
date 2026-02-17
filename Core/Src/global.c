@@ -1,7 +1,5 @@
 #include "global.h"
 
-volatile long count = 0;
-
 // Snapshot
 volatile mouse_flag_t MF;
 

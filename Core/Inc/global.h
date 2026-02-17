@@ -89,6 +89,4 @@ extern volatile bool wall[16][16][4];
 extern volatile uint8_t route[512];
 extern volatile uint16_t r_cnt;
 
-extern volatile long count;
-
 #endif /* GLOBAL_H */

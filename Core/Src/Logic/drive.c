@@ -20,8 +20,6 @@ void drive_calc_offset(float dist) {
   }
   drive_stop();
   MF.FLAG.CALC_OFFSET = 1;
-
-  printf("%d\r\n", count);
 }
 
 void half_sectionA(void) {
@@ -141,6 +139,7 @@ void hitting_wall(void) {
 
 void last_run(void) {
   MF.FLAG.CTRL = 0;
+  MF.FLAG.CALC_OFFSET = 0;
   half_sectionD();
   drive_wait();
 
