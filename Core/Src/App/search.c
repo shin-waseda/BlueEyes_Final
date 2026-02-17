@@ -118,11 +118,11 @@ void searchB_dijkstra(bool is_slalom) {
     get_wall();
     wall_temp &= ~0x88;
     write_map();
-    dijkstra_multi_goal(goals, GOAL_NUM);
-    make_route_dijkstra(mouse.y, mouse.x, mouse.dir);
-    dump_dijkstra_map(mouse.y, mouse.x, mouse.dir);
-    dump_route_dijkstra();
   }
+  dijkstra_multi_goal(goals, GOAL_NUM);
+  make_route_dijkstra(mouse.y, mouse.x, mouse.dir);
+  dump_dijkstra_map(mouse.y, mouse.x, mouse.dir);
+  dump_route_dijkstra();
 
   half_sectionA();
   adv_pos();

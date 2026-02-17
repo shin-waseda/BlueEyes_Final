@@ -77,6 +77,7 @@ void drive_U(float dist);
 void drive_S_L90(void);
 float get_target_v(float current_dist, float target_dist, float accel,
                    float max_v, float current_v, float target_v);
+void start_sequence(void);
 
 // route.c / maze.c
 void adv_pos(void);
@@ -128,12 +129,9 @@ extern MazePosition goals[GOAL_NUM];
 
 #define MAX_COST 0xFFFF
 void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count);
-void make_route_dijkstra(uint8_t start_y, uint8_t start_x, uint8_t start_dir/*,
-                         uint8_t goal_y, uint8_t goal_x*/);
+void make_route_dijkstra(uint8_t start_y, uint8_t start_x, uint8_t start_dir);
 
 // priority_queue.c
-#define PQ_SIZE 256
-
 typedef struct {
   uint8_t y : 4;
   uint8_t x : 4;

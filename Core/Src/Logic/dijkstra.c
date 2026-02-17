@@ -5,11 +5,11 @@
 #include <stdint.h>
 #include <stdio.h>
 
-// MazePosition goals[GOAL_NUM] = {GOAL_X, GOAL_Y};
-MazePosition goals[GOAL_NUM] = {{GOAL_X, GOAL_Y},
-                                {GOAL_X + 1, GOAL_Y},
-                                {GOAL_X, GOAL_Y + 1},
-                                {GOAL_X + 1, GOAL_Y + 1}};
+MazePosition goals[GOAL_NUM] = {GOAL_X, GOAL_Y};
+// MazePosition goals[GOAL_NUM] = {{GOAL_X, GOAL_Y},
+//                                 {GOAL_X + 1, GOAL_Y},
+//                                 {GOAL_X, GOAL_Y + 1},
+//                                 {GOAL_X + 1, GOAL_Y + 1}};
 
 static const uint8_t turn_cost[4][4] = {
     /* pdir\udir */
@@ -67,7 +67,7 @@ void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
   for (int i = 0; i < goal_count; i++) {
     printf("GOAL[%d]: x=%d y=%d, st[%d][%d] dist=%d\r\n", i, goals[i].x,
            goals[i].y, goals[i].y, goals[i].x,
-           st[goals[i].y][goals[i].x][0].dist); // 0に初期化されていれば正常
+           st[goals[i].y][goals[i].x][0].dist);
   }
 
   while (!pq_empty()) {
@@ -84,7 +84,7 @@ void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count) {
     int8_t px = u.x - dx[u.dir];
     int8_t py = u.y - dy[u.dir];
 
-    if (u.y == 8 && u.x == 7 && u.dir == 1) { // 東向きで (7,8) を処理
+    if (u.y == 8 && u.x == 7 && u.dir == 1) {
       uint8_t w = maze_wall[py][px];
       if (MF.FLAG.SCND)
         w >>= 4;

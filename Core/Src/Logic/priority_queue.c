@@ -1,7 +1,7 @@
 #include "logic.h"
 
 // PQ_SIZEを調整（256程度でも16x16なら十分なことが多いです）
-#define PQ_SIZE 1024
+#define PQ_SIZE 980
 
 static PQNode pq[PQ_SIZE];
 static int pq_count = 0;
@@ -41,7 +41,7 @@ void pq_push(uint8_t y, uint8_t x, uint8_t dir, uint16_t dist) {
 
 PQNode pq_pop(void) {
   if (pq_count == 0)
-    return (PQNode){0xFFFF, 0, 0, 0};
+    return (PQNode){0, 0, 0, 0xFF};
 
   PQNode res = pq[0];
   PQNode last = pq[--pq_count];
