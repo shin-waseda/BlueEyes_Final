@@ -18,7 +18,7 @@ void adv_pos(void) {
     mouse.x--;
     break;
   }
-  tmap[mouse.y][mouse.x] = true;
+  // tmap[mouse.y][mouse.x] = true;
 }
 
 void make_smap_adachi(void) {

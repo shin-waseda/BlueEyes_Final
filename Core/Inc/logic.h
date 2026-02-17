@@ -114,36 +114,36 @@ void map_init(void);
 void update_map_info(MazePosition s, uint8_t wall_info);
 void turn_dir(uint8_t t_pat);
 
+// priority_queue.c
+// typedef struct {
+//   uint8_t y : 4;
+//   uint8_t x : 4;
+//   uint8_t dir : 2;
+//   uint16_t dist;
+// } PQNode;
+// void pq_init(void);
+// void pq_push(uint8_t y, uint8_t x, uint8_t dir, uint16_t dist);
+// PQNode pq_pop(void);
+// bool pq_empty(void);
+
 // dijkstra.c
 typedef struct {
-  uint16_t dist;        // 0 ~ 65535 (2byte)
-  uint32_t nx : 4;      // 0 ~ 15 (4bit)
-  uint32_t ny : 4;      // 0 ~ 15 (4bit)
-  uint32_t nd : 2;      // 0 ~ 3  (2bit)
-  uint32_t visited : 1; // 0 or 1 (1bit)
-  uint32_t padding : 5; // 合計32bit(4byte)になるように調整
-} State;
+  uint16_t dist;
+  uint16_t parent : 10; // 0~1023, 0x3FF = NO_PARENT
+  uint16_t visited : 1;
+  // 残り 5bit はパディング（将来の拡張用）
+} State; // sizeof == 4バイト             // これで 4バイト になり、合計 4 KB
+         // まで半減します
 extern MazePosition goals_quad[4];
 extern bool use_quad_goal;
-extern State st[16][16][4];
+extern State st[1024];
 extern MazePosition goals[GOAL_NUM];
 void conf_route_dijkstra(void);
 
-#define MAX_COST 0xFFFF
+#define MAX_COST 10000u
 void dijkstra_multi_goal(MazePosition goals[], uint8_t goal_count);
 void make_route_dijkstra(uint8_t start_y, uint8_t start_x, uint8_t start_dir);
 
-// priority_queue.c
-typedef struct {
-  uint8_t y : 4;
-  uint8_t x : 4;
-  uint8_t dir : 2;
-  uint16_t dist;
-} PQNode;
-
-void pq_init(void);
-void pq_push(uint8_t y, uint8_t x, uint8_t dir, uint16_t dist);
-PQNode pq_pop(void);
-bool pq_empty(void);
+// logic.h
 
 #endif /* LOGIC_H */

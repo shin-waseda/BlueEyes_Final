@@ -18,8 +18,9 @@ typedef union {
     uint16_t SCND : 1;
     uint16_t RETURN : 1;
     uint16_t CALC_OFFSET : 1;
-    uint16_t CALC : 1; // next linear drive should apply offset correction once
-    uint16_t OTHER : 8;
+    uint16_t CALC : 1;
+    uint16_t DEBUG_MODE : 1;
+    uint16_t OTHER : 7;
   } FLAG;
 } mouse_flag_t;
 
@@ -84,9 +85,13 @@ extern volatile uint8_t goal_x;
 extern volatile uint8_t goal_y;
 extern volatile uint8_t maze_wall[16][16];
 extern volatile uint16_t smap[16][16];
-extern volatile bool tmap[16][16];
-extern volatile bool wall[16][16][4];
+// extern volatile bool tmap[16][16];
+extern volatile uint32_t tmap_bits[8];
 extern volatile uint8_t route[512];
 extern volatile uint16_t r_cnt;
+
+#ifdef DEBUG_PQ
+extern uint16_t calc_cnt;
+#endif
 
 #endif /* GLOBAL_H */

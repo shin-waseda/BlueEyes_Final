@@ -99,10 +99,18 @@ void conf_route_dijkstra(void) {
   get_wall();
   write_map();
 
+#ifdef DEBUG_PQ
+  calc_cnt = 0;
+  MF.FLAG.DEBUG_MODE = 1;
+#endif
   dijkstra_multi_goal(goals, GOAL_NUM);
   make_route_dijkstra(mouse.y, mouse.x, mouse.dir);
-  // dump_dijkstra_map(mouse.y, mouse.x, mouse.dir);
-  // dump_route_dijkstra();
+#ifdef DEBUG_PQ
+  MF.FLAG.DEBUG_MODE = 0;
+  printf("calc_cnt : %d\n", calc_cnt);
+  dump_dijkstra_map(mouse.y, mouse.x, mouse.dir);
+  dump_route_dijkstra();
+#endif
   r_cnt = 0;
 }
 
@@ -133,6 +141,7 @@ void searchB_dijkstra(bool is_slalom) {
 
   do {
     drive_calc_offset(CALC_OFFSET_DIST);
+    printf("route : %02X\n", route[r_cnt]);
     switch (route[r_cnt++]) {
     case 0x88:
       one_sectionU();

@@ -28,6 +28,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   }
 
   if (htim->Instance == htim16.Instance) {
+#ifdef DEBUG_PQ
+    if (MF.FLAG.DEBUG_MODE) {
+      calc_cnt++;
+    }
+#endif
     if (HAL_GPIO_ReadPin(CW_CCW_L_GPIO_Port, CW_CCW_L_Pin) == MT_FWD_L) {
       OMRpulse_l++;
     } else {

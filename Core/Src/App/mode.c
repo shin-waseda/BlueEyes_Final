@@ -110,8 +110,17 @@ uint8_t execute_mode(uint8_t mode) {
     make_route();
     dump_adachi_map();
 
+#ifdef DEBUG_PQ
+    drive_start();
+    calc_cnt = 0;
+    MF.FLAG.DEBUG_MODE = 1;
+#endif
     dijkstra_multi_goal(goals, GOAL_NUM);
     make_route_dijkstra(mouse.y, mouse.x, mouse.dir);
+#ifdef DEBUG_PQ
+    MF.FLAG.DEBUG_MODE = 0;
+    printf("calc_cnt : %d\n", calc_cnt);
+#endif
     dump_dijkstra_map(mouse.y, mouse.x, mouse.dir);
     dump_route_dijkstra();
     break;

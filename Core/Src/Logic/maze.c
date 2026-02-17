@@ -8,7 +8,7 @@ void map_init(void) {
   for (y = 0; y < 16; y++) {
     for (x = 0; x < 16; x++) {
       maze_wall[y][x] = 0xf0;
-      tmap[y][x] = false;
+      // tmap[y][x] = false;
     }
   }
 

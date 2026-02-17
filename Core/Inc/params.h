@@ -4,6 +4,8 @@
 #include "global.h"
 #include "main.h"
 
+// #define DEBUG_PQ
+
 typedef struct {
   float target_v;
   float max_neko;
@@ -40,7 +42,10 @@ typedef struct {
 #define MAX_VECT 1500
 
 // maze.c
-#define GOAL_NUM 1
-#define GOAL_X 5
-#define GOAL_Y 3
+#define GOAL_NUM 4
+#define GOAL_X 7
+#define GOAL_Y 7
+// #define GOAL_NUM 1
+// #define GOAL_X 5
+// #define GOAL_Y 3
 #endif /* PARAMS_H */
