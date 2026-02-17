@@ -40,7 +40,7 @@ typedef struct {
 #define MAX_VECT 1500
 
 // maze.c
-#define GOAL_NUM 1
-#define GOAL_X 2
-#define GOAL_Y 0
+#define GOAL_NUM 4
+#define GOAL_X 7
+#define GOAL_Y 7
 #endif /* PARAMS_H */

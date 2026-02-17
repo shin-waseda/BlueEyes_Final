@@ -1,65 +1,67 @@
 #include "logic.h"
 
+// PQ_SIZEを調整（256程度でも16x16なら十分なことが多いです）
+#define PQ_SIZE 1024
+
 static PQNode pq[PQ_SIZE];
 static int pq_count = 0;
+extern State st[16][16][4];
 
 void pq_init(void) { pq_count = 0; }
 
 void pq_push(uint8_t y, uint8_t x, uint8_t dir, uint16_t dist) {
   if (pq_count >= PQ_SIZE) {
+    printf("PQ OVERFLOW! count=%d\r\n", pq_count); // カウント表示に変更
+
     return;
   }
 
-  int idx = pq_count;
-  pq[idx].y = y;
-  pq[idx].x = x;
-  pq[idx].dir = dir;
-  pq[idx].dist = dist;
-  pq_count++;
+  // 既に確定済みのノードは push しない ← これを追加
+  if (st[y][x][dir].visited)
+    return;
 
-  while (idx > 0) {
-    int parent = (idx - 1) / 2;
-    if (pq[parent].dist <= pq[idx].dist)
+  // 現在の最良値より悪い dist は push しない ← これも追加
+  if (dist > st[y][x][dir].dist)
+    return;
+
+  int i = pq_count++;
+  // 穴埋め法：正しい位置が見つかるまで親を下にずらす
+  while (i > 0) {
+    int p = (i - 1) / 2;
+    if (pq[p].dist <= dist)
       break;
-    PQNode temp = pq[parent];
-    pq[parent] = pq[idx];
-    pq[idx] = temp;
-    idx = parent;
+    pq[i] = pq[p];
+    i = p;
   }
+  pq[i].y = y;
+  pq[i].x = x;
+  pq[i].dir = dir;
+  pq[i].dist = dist;
 }
 
 PQNode pq_pop(void) {
-  if (pq_count == 0) {
-    return (PQNode){0, 0, 0, 0xFFFF};
-  }
+  if (pq_count == 0)
+    return (PQNode){0xFFFF, 0, 0, 0};
 
-  PQNode ret = pq[0];
+  PQNode res = pq[0];
+  PQNode last = pq[--pq_count];
 
-  pq_count--;
   if (pq_count > 0) {
-    pq[0] = pq[pq_count];
-    int idx = 0;
-    while (1) {
-      int left = 2 * idx + 1;
-      int right = 2 * idx + 2;
-      int smallest = idx;
-
-      if (left < pq_count && pq[left].dist < pq[smallest].dist)
-        smallest = left;
-      if (right < pq_count && pq[right].dist < pq[smallest].dist)
-        smallest = right;
-
-      if (smallest == idx)
+    int i = 0;
+    // 穴埋め法：正しい位置が見つかるまで子を上に引き上げる
+    while (i * 2 + 1 < pq_count) {
+      int a = i * 2 + 1;
+      int b = i * 2 + 2;
+      if (b < pq_count && pq[b].dist < pq[a].dist)
+        a = b;
+      if (pq[a].dist >= last.dist)
         break;
-
-      PQNode temp = pq[idx];
-      pq[idx] = pq[smallest];
-      pq[smallest] = temp;
-      idx = smallest;
+      pq[i] = pq[a];
+      i = a;
     }
+    pq[i] = last;
   }
-
-  return ret;
+  return res;
 }
 
 bool pq_empty(void) { return (pq_count == 0); }

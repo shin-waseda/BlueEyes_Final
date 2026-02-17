@@ -114,6 +114,16 @@ void update_map_info(MazePosition s, uint8_t wall_info);
 void turn_dir(uint8_t t_pat);
 
 // dijkstra.c
+typedef struct {
+  uint16_t dist;        // 0 ~ 65535 (2byte)
+  uint32_t nx : 4;      // 0 ~ 15 (4bit)
+  uint32_t ny : 4;      // 0 ~ 15 (4bit)
+  uint32_t nd : 2;      // 0 ~ 3  (2bit)
+  uint32_t visited : 1; // 0 or 1 (1bit)
+  uint32_t padding : 5; // 合計32bit(4byte)になるように調整
+} State;
+
+extern State st[16][16][4];
 extern MazePosition goals[GOAL_NUM];
 
 #define MAX_COST 0xFFFF
@@ -125,9 +135,9 @@ void make_route_dijkstra(uint8_t start_y, uint8_t start_x, uint8_t start_dir/*,
 #define PQ_SIZE 256
 
 typedef struct {
-  uint8_t y;
-  uint8_t x;
-  uint8_t dir;
+  uint8_t y : 4;
+  uint8_t x : 4;
+  uint8_t dir : 2;
   uint16_t dist;
 } PQNode;
 

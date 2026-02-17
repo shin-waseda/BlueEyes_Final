@@ -110,7 +110,7 @@ uint8_t execute_mode(uint8_t mode) {
     make_route();
     dump_adachi_map();
 
-    dijkstra_multi_goal(goals, 1);
+    dijkstra_multi_goal(goals, GOAL_NUM);
     make_route_dijkstra(mouse.y, mouse.x, mouse.dir);
     dump_dijkstra_map(mouse.y, mouse.x, mouse.dir);
     dump_route_dijkstra();
