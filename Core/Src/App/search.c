@@ -81,7 +81,7 @@ void get_wall(void) {
   if (wall_temp & 0x11)
     led_state.LED.left = 1;
 
-  // led_write(led_state);
+  led_write(led_state);
 }
 void write_map(void) { update_map_info(mouse, wall_temp); }
 void conf_route(void) {
@@ -103,7 +103,12 @@ void conf_route_dijkstra(void) {
   calc_cnt = 0;
   MF.FLAG.DEBUG_MODE = 1;
 #endif
-  dijkstra_multi_goal(goals, GOAL_NUM);
+
+  if (!MF.FLAG.RETURN) {
+    dijkstra_multi_goal(fw_goals, GOAL_NUM);
+  } else {
+    dijkstra_multi_goal(rt_goals, 1);
+  }
   make_route_dijkstra(mouse.y, mouse.x, mouse.dir);
 #ifdef DEBUG_PQ
   MF.FLAG.DEBUG_MODE = 0;
@@ -127,9 +132,17 @@ void searchB_dijkstra(bool is_slalom) {
     wall_temp &= ~0x88;
     write_map();
   }
-  dijkstra_multi_goal(goals, GOAL_NUM);
+  if (!MF.FLAG.RETURN) {
+    dijkstra_multi_goal(fw_goals, GOAL_NUM);
+  } else {
+    dijkstra_multi_goal(rt_goals, 1);
+  }
   make_route_dijkstra(mouse.y, mouse.x, mouse.dir);
-  dump_dijkstra_map(mouse.y, mouse.x, mouse.dir);
+  if (!MF.FLAG.RETURN) {
+    dump_dijkstra_map(mouse.y, mouse.x, mouse.dir, fw_goals, GOAL_NUM);
+  } else {
+    dump_dijkstra_map(mouse.y, mouse.x, mouse.dir, rt_goals, 1);
+  }
   dump_route_dijkstra();
 
   half_sectionA();
@@ -137,11 +150,11 @@ void searchB_dijkstra(bool is_slalom) {
   get_wall();
   write_map();
 
-  r_cnt = 0;
+  r_cnt = (!MF.FLAG.SCND) ? 0 : 1;
 
   do {
     drive_calc_offset(CALC_OFFSET_DIST);
-    printf("route : %02X\n", route[r_cnt]);
+    // printf("route : %02X\n", route[r_cnt]);
     switch (route[r_cnt++]) {
     case 0x88:
       one_sectionU();

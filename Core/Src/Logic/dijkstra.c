@@ -404,8 +404,9 @@ void pq_print_peak(void) {
 //  その他（変更なし）
 // =====================================================================
 
-MazePosition goals[GOAL_NUM] = {GOAL_X, GOAL_Y};
-// MazePosition goals[GOAL_NUM] = {{GOAL_X, GOAL_Y},
+MazePosition rt_goals[1] = {{0, 0}};
+MazePosition fw_goals[GOAL_NUM] = {{GOAL_X, GOAL_Y}};
+// MazePosition fw_goals[GOAL_NUM] = {{GOAL_X, GOAL_Y},
 //                                 {GOAL_X + 1, GOAL_Y},
 //                                 {GOAL_X, GOAL_Y + 1},
 //                                 {GOAL_X + 1, GOAL_Y + 1}};
@@ -560,7 +561,7 @@ void make_route_dijkstra(uint8_t start_y, uint8_t start_x, uint8_t start_dir) {
 // =====================================================================
 //  dump_dijkstra_map（st アクセスをフラットインデックスに変更）
 // =====================================================================
-void dump_dijkstra_map(uint8_t my, uint8_t mx, uint8_t md) {
+void dump_dijkstra_map(uint8_t my, uint8_t mx, uint8_t md, MazePosition *goals, uint8_t goal_count) {
   static const uint8_t wall_mask[4] = {0x08, 0x04, 0x02, 0x01};
 
   printf("\r\n=== DOUBLE WALL MAP (FIXED LAYOUT) ===\r\n");
@@ -608,7 +609,7 @@ void dump_dijkstra_map(uint8_t my, uint8_t mx, uint8_t md) {
       }
 
       bool is_goal = false;
-      for (int i = 0; i < GOAL_NUM; i++) {
+      for (int i = 0; i < goal_count; i++) {
         if (x == goals[i].x && y == goals[i].y) {
           is_goal = true;
           break;

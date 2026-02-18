@@ -105,8 +105,6 @@ void conf_route(void);
 void searchB_dijkstra(bool is_slalom);
 void last_run(void);
 void led_pattern_goal(void);
-void dump_dijkstra_map(uint8_t my, uint8_t mx, uint8_t md);
-void dump_route_dijkstra(void);
 void drive_calc_offset(float dist);
 
 // maze.c
@@ -137,7 +135,8 @@ typedef struct {
 extern MazePosition goals_quad[4];
 extern bool use_quad_goal;
 extern State st[1024];
-extern MazePosition goals[GOAL_NUM];
+extern MazePosition fw_goals[GOAL_NUM];
+extern MazePosition rt_goals[1];
 void conf_route_dijkstra(void);
 
 #define MAX_COST 10000u

@@ -13,7 +13,7 @@ void drive_calc_offset(float dist) {
   bool done = 1;
   drive_start();
   while (current_position.dist < dist) {
-    if (done) {
+    if (done && !MF.FLAG.SCND) {
       conf_route_dijkstra();
       done = 0;
     }
@@ -260,9 +260,9 @@ void drive_trapezoid(float dist, float target_v, float end_v, float max_v) {
     float mag_v = get_target_v(fabsf(current_position.dist), abs_dist, ACCEL,
                                fabsf(max_v), fabsf(target_v), fabsf(end_v));
     output_speed.vect = mag_v * sign;
-    printf("vect=%d wall=%d neko=%d v=%d\n", (int)(output_speed.vect),
-           (int)(wall_neko_val), (int)(output_speed.neko),
-           (int)(current_speed.vect));
+    // printf("vect=%d wall=%d neko=%d v=%d\n", (int)(output_speed.vect),
+    //        (int)(wall_neko_val), (int)(output_speed.neko),
+    //        (int)(current_speed.vect));
   }
   drive_stop();
 }

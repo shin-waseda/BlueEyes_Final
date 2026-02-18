@@ -26,7 +26,9 @@ void write_map(void);
 void conf_route(void);
 void conf_route_dijkstra(void);
 void dump_adachi_map(void);
-void dump_dijkstra_map(uint8_t my, uint8_t mx, uint8_t md);
+void dump_dijkstra_map(uint8_t my, uint8_t mx, uint8_t md, MazePosition *goals, uint8_t goal_count);
+void dump_route_dijkstra(void);
+
 
 void conf_route_dijkstra(void);
 
