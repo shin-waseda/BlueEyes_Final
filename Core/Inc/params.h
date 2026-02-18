@@ -24,7 +24,7 @@ typedef struct {
 #define WALL_BASE_L 900
 #define KABEKIRE_SHIKIICHI 10
 #define CTRL_MAX 50
-#define SIDE_WALL_NEKO_P 0.6
+#define SIDE_WALL_NEKO_P 0.4
 
 // drive.c
 #define SETPOS_FRONT 38.8f
@@ -42,10 +42,10 @@ typedef struct {
 #define MAX_VECT 1500
 
 // maze.c
-#define GOAL_NUM 4
-#define GOAL_X 7
-#define GOAL_Y 7
-// #define GOAL_NUM 1
-// #define GOAL_X 5
-// #define GOAL_Y 3
+// #define GOAL_NUM 4
+// #define GOAL_X 7
+// #define GOAL_Y 7
+#define GOAL_NUM 1
+#define GOAL_X 1
+#define GOAL_Y 0
 #endif /* PARAMS_H */

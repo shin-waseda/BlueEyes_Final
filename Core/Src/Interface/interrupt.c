@@ -2,17 +2,21 @@
 #include "interface.h"
 #include "logic.h"
 
+volatile uint16_t arr_l;
+volatile uint16_t arr_r;
+
 // タイマー割り込み（1kHz 1ms周期)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == htim6.Instance) {
     pre_sensor_values = sensor_values;
     sensor_values = get_sensor_value();
 
-    // パルス数のスナップショットを取得（1ms間の移動量を固定）
+    // __disable_irq();
     int16_t snap_l = OMRpulse_l;
     int16_t snap_r = OMRpulse_r;
-    // 即座にリセット（副作用の最小化とカウント漏れ防止）
-    reset_odometry_pulses();
+    OMRpulse_l = 0;
+    OMRpulse_r = 0;
+    // __enable_irq();
 
     current_speed = get_current_speed(snap_l, snap_r);
     current_position = get_current_position(
@@ -25,6 +29,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         is_wall_vanishing(delta_l_cnt), is_wall_vanishing(delta_r_cnt));
 
     output_speed.neko += output_speed.target_catnip * TIMER_CLOCK;
+
+    arr_l = motor_control(&htim16);
+    arr_r = motor_control(&htim17);
   }
 
   if (htim->Instance == htim16.Instance) {
@@ -39,7 +46,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
       OMRpulse_l--;
     }
 
-    uint16_t arr_l = motor_control(htim);
     if (arr_l > 0)
       __HAL_TIM_SET_AUTORELOAD(&htim16, arr_l);
   }
@@ -51,7 +57,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
       OMRpulse_r--;
     }
 
-    uint16_t arr_r = motor_control(htim);
     if (arr_r > 0)
       __HAL_TIM_SET_AUTORELOAD(&htim17, arr_r);
   }

@@ -81,7 +81,7 @@ void get_wall(void) {
   if (wall_temp & 0x11)
     led_state.LED.left = 1;
 
-  led_write(led_state);
+  // led_write(led_state);
 }
 void write_map(void) { update_map_info(mouse, wall_temp); }
 void conf_route(void) {
@@ -157,6 +157,10 @@ void searchB_dijkstra(bool is_slalom) {
     case 0x11:
       turn_left(is_slalom);
       turn_dir(DIR_TURN_L90);
+      break;
+
+    case 0xFF:
+      drive_stop();
       break;
     }
     adv_pos();

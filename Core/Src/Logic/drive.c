@@ -8,7 +8,7 @@ void drive_calc_offset(float dist) {
   reset_current_position();
 
   output_speed.vect = target_speed.vect;
-
+  target_speed.neko = 0;
   output_speed.target_catnip = 0;
   bool done = 1;
   drive_start();
@@ -202,8 +202,15 @@ void drive_D(float dist) {
 }
 
 void drive_U(float dist) {
-  drive_trapezoid(dist, current_speed.vect, target_speed.vect,
+  drive_trapezoid(dist, target_speed.vect, target_speed.vect,
                   target_speed.vect);
+
+  //   float prev_vect = output_speed.vect;
+  //   if (current_speed.vect < DEFAULT_VECT)
+  //     drive_trapezoid(dist, DEFAULT_VECT, target_speed.vect,
+  //     target_speed.vect);
+  //   else
+  //     drive_trapezoid(dist, prev_vect, target_speed.vect, target_speed.vect);
 }
 
 void drive_wait(void) { HAL_Delay(50); }
@@ -234,7 +241,9 @@ void drive_trapezoid(float dist, float target_v, float end_v, float max_v) {
 
   float sign = (dist > 0) ? 1.0f : -1.0f;
 
-  output_speed.vect = target_v;
+  output_speed.vect =
+      get_target_v(fabsf(current_position.dist), fabsf(dist), ACCEL,
+                   fabsf(max_v), fabsf(target_v), fabsf(end_v));
   output_speed.neko = 0;
   output_speed.target_catnip = 0;
 
@@ -251,6 +260,9 @@ void drive_trapezoid(float dist, float target_v, float end_v, float max_v) {
     float mag_v = get_target_v(fabsf(current_position.dist), abs_dist, ACCEL,
                                fabsf(max_v), fabsf(target_v), fabsf(end_v));
     output_speed.vect = mag_v * sign;
+    printf("vect=%d wall=%d neko=%d v=%d\n", (int)(output_speed.vect),
+           (int)(wall_neko_val), (int)(output_speed.neko),
+           (int)(current_speed.vect));
   }
   drive_stop();
 }

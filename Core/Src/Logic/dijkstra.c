@@ -404,11 +404,11 @@ void pq_print_peak(void) {
 //  その他（変更なし）
 // =====================================================================
 
-// MazePosition goals[GOAL_NUM] = {GOAL_X, GOAL_Y};
-MazePosition goals[GOAL_NUM] = {{GOAL_X, GOAL_Y},
-                                {GOAL_X + 1, GOAL_Y},
-                                {GOAL_X, GOAL_Y + 1},
-                                {GOAL_X + 1, GOAL_Y + 1}};
+MazePosition goals[GOAL_NUM] = {GOAL_X, GOAL_Y};
+// MazePosition goals[GOAL_NUM] = {{GOAL_X, GOAL_Y},
+//                                 {GOAL_X + 1, GOAL_Y},
+//                                 {GOAL_X, GOAL_Y + 1},
+//                                 {GOAL_X + 1, GOAL_Y + 1}};
 
 static const uint8_t turn_cost[4][4] = {
     {0, 7, 50, 7},

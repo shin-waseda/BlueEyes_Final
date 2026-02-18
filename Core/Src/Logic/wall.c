@@ -27,7 +27,7 @@ uint16_t wall_check(uint16_t sensor_val, uint16_t pre_val, float current_v,
   int16_t delta = (int16_t)sensor_val - (int16_t)pre_val;
 
   if (abs(delta) >= KABEKIRE_SHIKIICHI || sensor_val < (limit / 2)) {
-    if (current_v < 50.0f)
+    if (current_v < 100.0f)
       return 0;
     return (uint16_t)(10000.0f / current_v);
   }

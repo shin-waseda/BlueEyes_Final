@@ -178,7 +178,9 @@ void test_straight(void) {
   get_base_sensor_values();
   MF.FLAG.CTRL = 1;
   // drive_trapezoid(dist, 200, 200, target_v);
-  drive_U(dist);
+  // drive_U(dist);
+  one_sectionU();
+  one_sectionU();
 }
 
 void test_rotate(void) {
