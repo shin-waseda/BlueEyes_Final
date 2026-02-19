@@ -40,7 +40,7 @@ void searchB_adachi(bool is_slalom) {
 
   do {
     switch (route[r_cnt++]) {
-    case 0x88:
+    case 0x81:
       one_sectionU();
       break;
     case 0x44:
@@ -110,8 +110,9 @@ void conf_route_dijkstra(void) {
     dijkstra_multi_goal(rt_goals, 1);
   }
   make_route_dijkstra(mouse.y, mouse.x, mouse.dir);
+  if (MF.FLAG.SCND)
 #ifdef DEBUG_PQ
-  MF.FLAG.DEBUG_MODE = 0;
+    MF.FLAG.DEBUG_MODE = 0;
   printf("calc_cnt : %d\n", calc_cnt);
   dump_dijkstra_map(mouse.y, mouse.x, mouse.dir);
   dump_route_dijkstra();
@@ -156,7 +157,7 @@ void searchB_dijkstra(bool is_slalom) {
     drive_calc_offset(CALC_OFFSET_DIST);
     // printf("route : %02X\n", route[r_cnt]);
     switch (route[r_cnt++]) {
-    case 0x88:
+    case 0x81:
       one_sectionU();
       break;
     case 0x44:

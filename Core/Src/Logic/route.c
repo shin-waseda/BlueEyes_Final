@@ -108,7 +108,7 @@ void make_route() {
 
     switch (route[i]) {
     case 0x00:
-      route[i] = 0x88;
+      route[i] = 0x81;
       break;
     case 0x01:
       turn_dir(DIR_TURN_R90);

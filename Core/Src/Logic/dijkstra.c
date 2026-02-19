@@ -536,10 +536,23 @@ void make_route_dijkstra(uint8_t start_y, uint8_t start_x, uint8_t start_dir) {
   uint16_t cur = IDX(start_y, start_x, start_dir);
   int r_idx = 0;
 
+  if (st[cur].dist > 0) {
+    uint16_t par = st[cur].parent;
+    if (par != NO_PARENT) {
+      uint8_t cur_dir = IDX_D(cur);
+      uint8_t par_dir = IDX_D(par);
+
+      if (cur_dir == par_dir) {
+        route[r_idx++] = 0x81;
+      } else {
+        route[r_idx++] = determine_turn_op(cur_dir, par_dir);
+      }
+      cur = par;
+    }
+  }
+
   while (st[cur].dist > 0 && r_idx < 500) {
     uint16_t par = st[cur].parent;
-
-    // ゴール到達 or 親なし
     if (par == NO_PARENT)
       break;
 
@@ -547,21 +560,26 @@ void make_route_dijkstra(uint8_t start_y, uint8_t start_x, uint8_t start_dir) {
     uint8_t par_dir = IDX_D(par);
 
     if (cur_dir == par_dir) {
-      route[r_idx++] = 0x88; // 直進
+      if (MF.FLAG.SCND && r_idx > 1 && // r_idx > 1 で index 0 の0x81を保護
+          (route[r_idx - 1] & 0xF0) == 0x80 &&
+          (route[r_idx - 1] & 0x0F) < 0x0F) {
+        route[r_idx - 1]++;
+      } else {
+        route[r_idx++] = 0x81;
+      }
     } else {
       route[r_idx++] = determine_turn_op(cur_dir, par_dir);
     }
-
     cur = par;
   }
-
   route[r_idx] = 0xFF;
 }
 
 // =====================================================================
 //  dump_dijkstra_map（st アクセスをフラットインデックスに変更）
 // =====================================================================
-void dump_dijkstra_map(uint8_t my, uint8_t mx, uint8_t md, MazePosition *goals, uint8_t goal_count) {
+void dump_dijkstra_map(uint8_t my, uint8_t mx, uint8_t md, MazePosition *goals,
+                       uint8_t goal_count) {
   static const uint8_t wall_mask[4] = {0x08, 0x04, 0x02, 0x01};
 
   printf("\r\n=== DOUBLE WALL MAP (FIXED LAYOUT) ===\r\n");
@@ -656,8 +674,10 @@ void dump_route_dijkstra(void) {
   printf("\r\n=== ROUTE ACTIONS ===\r\n");
   for (int i = 0; route[i] != 0xFF; i++) {
     uint8_t a = route[i];
-    if (a == 0x88)
+    if (a == 0x81)
       printf("%3d: FWD\r\n", i);
+    else if ((a & 0xF0) == 0x80 && (a & 0x0F) >= 2)
+      printf("%3d: FWD x%d\r\n", i, a & 0x0F);
     else if (a == 0x44)
       printf("%3d: RIGHT\r\n", i);
     else if (a == 0x11)
