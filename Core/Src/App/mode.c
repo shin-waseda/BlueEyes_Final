@@ -22,14 +22,26 @@ const SlalomProfile S90_500 = {.acc_dist = 43.0,
                                .max_neko = 600,
                                .target_v = 500};
 
+const SlalomProfile S90_600 = {.acc_dist = 60.0,
+                               .decel_dist = 60.0,
+                               .const_dist = 30.0,
+                               .pre_offset_dist = 0.0,
+                               .post_offset_dist = 20.0,
+                               .target_catnip = 6000,
+                               .max_neko = 600,
+                               .target_v = 600};
+
 SlalomProfile select_S90_param(uint8_t mode) {
   switch (mode) {
   case 1:
+    printf("S90_400\n");
     return S90_400;
   case 2:
+    printf("S90_500\n");
     return S90_500;
-  default:
-    return S90_400;
+  case 3:
+    printf("S90_600\n");
+    return S90_600;
   }
 }
 
@@ -117,6 +129,29 @@ uint8_t execute_mode(uint8_t mode) {
 
     disable_motor();
 
+    break;
+
+  case 4:
+    select_speed(select_mode(1));
+    current_slalom_profile = select_S90_param(select_mode(1));
+    enable_motor();
+    MF.FLAG.SCND = 1;
+
+    start_sequence();
+
+    MF.FLAG.RETURN = 0;
+    led_pattern_search();
+
+    load_map_from_flash();
+
+    dijkstra_multi_goal(fw_goals, GOAL_NUM);
+    make_route_dijkstra(mouse.y, mouse.x, mouse.dir);
+    dump_dijkstra_map(mouse.y, mouse.x, mouse.dir, fw_goals, GOAL_NUM);
+    dump_route_dijkstra();
+
+    run_route_continuous();
+
+    disable_motor();
     break;
 
   case 5:
@@ -267,7 +302,11 @@ void test_drive(void) {
 
       break;
     case 7:
-      drive_straight(180, 0, 100);
+      int i = 0;
+      do {
+        i = select_mode(0);
+      } while (i == 0);
+      drive_straight(180, 0, (50 * i));
       return;
     default:
       return;
@@ -279,24 +318,31 @@ void select_speed(uint8_t mode) {
   switch (mode) {
   case 1:
     target_speed.vect = 400;
+    printf("straight speed %d\n", 400);
     break;
   case 2:
     target_speed.vect = 500;
+    printf("straight speed %d\n", 500);
     break;
   case 3:
     target_speed.vect = 600;
+    printf("straight speed %d\n", 600);
     break;
   case 4:
     target_speed.vect = 800;
+    printf("straight speed %d\n", 800);
     break;
   case 5:
     target_speed.vect = 1000;
+    printf("straight speed %d\n", 1000);
     break;
   case 6:
     target_speed.vect = 1200;
+    printf("straight speed %d\n", 1200);
     break;
   case 7:
     target_speed.vect = 1400;
+    printf("straight speed %d\n", 1400);
     break;
   }
 }

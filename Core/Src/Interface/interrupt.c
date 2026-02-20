@@ -11,12 +11,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     pre_sensor_values = sensor_values;
     sensor_values = get_sensor_value();
 
-    // __disable_irq();
     int16_t snap_l = OMRpulse_l;
     int16_t snap_r = OMRpulse_r;
     OMRpulse_l = 0;
     OMRpulse_r = 0;
-    // __enable_irq();
 
     current_speed = get_current_speed(snap_l, snap_r);
     current_position = get_current_position(

@@ -46,6 +46,6 @@ typedef struct {
 // #define GOAL_X 7
 // #define GOAL_Y 7
 #define GOAL_NUM 1
-#define GOAL_X 4
-#define GOAL_Y 6
+#define GOAL_X 1
+#define GOAL_Y 0
 #endif /* PARAMS_H */

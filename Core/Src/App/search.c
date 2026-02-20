@@ -110,11 +110,10 @@ void conf_route_dijkstra(void) {
     dijkstra_multi_goal(rt_goals, 1);
   }
   make_route_dijkstra(mouse.y, mouse.x, mouse.dir);
-  if (MF.FLAG.SCND)
 #ifdef DEBUG_PQ
-    MF.FLAG.DEBUG_MODE = 0;
+  MF.FLAG.DEBUG_MODE = 0;
   printf("calc_cnt : %d\n", calc_cnt);
-  dump_dijkstra_map(mouse.y, mouse.x, mouse.dir);
+  dump_dijkstra_map(mouse.y, mouse.x, mouse.dir, fw_goals, GOAL_NUM);
   dump_route_dijkstra();
 #endif
   r_cnt = 0;
@@ -188,6 +187,83 @@ void searchB_dijkstra(bool is_slalom) {
 
   if (!MF.FLAG.SCND)
     store_map_in_flash();
+}
+
+// ゴール判定ヘルパー
+static bool is_goal(void) {
+  for (int i = 0; i < GOAL_NUM; i++) {
+    if (mouse.x == fw_goals[i].x && mouse.y == fw_goals[i].y) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void run_route_continuous(void) {
+  MF.FLAG.CTRL = 1;
+  MF.FLAG.CALC = 0;
+  MF.FLAG.CALC_OFFSET = 0;
+
+  half_sectionA();
+  adv_pos();
+  LEDinfo tmp;
+
+  r_cnt = 1;
+  float start_v = current_speed.vect;
+
+  while (1) {
+    uint8_t cmd = route[r_cnt++];
+    // printf("cmd:%02X next:%02X\n", cmd, next_cmd);
+    if (cmd == 0xFF) {
+      drive_stop();
+      break;
+    }
+
+    if ((cmd & 0xF0) == 0x80) {
+      tmp.LEDs = 0;
+      tmp.LED.front = 1;
+      led_write(tmp);
+      int n = cmd & 0x0F;
+      float dist = n * (HALF_SEC_DIST * 2);
+
+      float end_v = current_slalom_profile.target_v;
+
+      MF.FLAG.CTRL = 1;
+
+      drive_trapezoid(dist, start_v, end_v, target_speed.vect);
+      start_v = current_slalom_profile.target_v;
+
+      for (int i = 0; i < n; i++) {
+        adv_pos();
+      }
+    } else if (cmd == 0x44) {
+      tmp.LEDs = 0;
+      tmp.LED.right = 1;
+      led_write(tmp);
+      MF.FLAG.CTRL = 0;
+      drive_S_R90();
+      turn_dir(DIR_TURN_R90);
+      adv_pos();
+      start_v = current_slalom_profile.target_v;
+    } else if (cmd == 0x11) {
+      tmp.LEDs = 0;
+      tmp.LED.left = 1;
+      led_write(tmp);
+      MF.FLAG.CTRL = 0;
+      drive_S_L90();
+      turn_dir(DIR_TURN_L90);
+      adv_pos();
+      start_v = current_slalom_profile.target_v;
+    }
+    // printf("loop end   v=%d\n", (int)current_speed.vect);
+    if (is_goal()) {
+      break;
+    }
+  }
+
+  one_sectionU();
+  turn_dir(DIR_TURN_180);
+  led_pattern_goal();
 }
 
 void dump_adachi_map(void) {

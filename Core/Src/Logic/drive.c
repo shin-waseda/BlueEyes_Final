@@ -41,6 +41,7 @@ void one_sectionU(void) {
 }
 
 void turn_right(bool is_slalom) {
+  MF.FLAG.CTRL = 0;
   if (is_slalom) {
     drive_S_R90();
   } else {
@@ -53,6 +54,7 @@ void turn_right(bool is_slalom) {
 }
 
 void turn_left(bool is_slalom) {
+  MF.FLAG.CTRL = 0;
   if (is_slalom) {
     drive_S_L90();
   } else {
@@ -260,9 +262,11 @@ void drive_trapezoid(float dist, float target_v, float end_v, float max_v) {
     float mag_v = get_target_v(fabsf(current_position.dist), abs_dist, ACCEL,
                                fabsf(max_v), fabsf(target_v), fabsf(end_v));
     output_speed.vect = mag_v * sign;
-    // printf("vect=%d wall=%d neko=%d v=%d\n", (int)(output_speed.vect),
-    //        (int)(wall_neko_val), (int)(output_speed.neko),
-    //        (int)(current_speed.vect));
+#ifdef DEBUG_PQ
+    printf("vect=%d wall=%d neko=%d v=%d\n", (int)(output_speed.vect),
+           (int)(wall_neko_val), (int)(output_speed.neko),
+           (int)(current_speed.vect));
+#endif
   }
   drive_stop();
 }
@@ -300,29 +304,55 @@ void drive_slalom(SlalomProfile p, bool direction) {
   cumulative_dist +=
       (MF.FLAG.CALC) ? p.pre_offset_dist - CALC_OFFSET_DIST : p.pre_offset_dist;
   output_speed.target_catnip = 0;
-  while (current_position.dist < cumulative_dist)
-    ;
+  while (current_position.dist < cumulative_dist) {
+#ifdef DEBUG_PQ
+    printf("vect=%d wall=%d neko=%d v=%d\n", (int)(output_speed.vect),
+           (int)(wall_neko_val), (int)(output_speed.neko),
+           (int)(current_speed.vect));
+#endif
+  }
 
   cumulative_dist += p.acc_dist;
   output_speed.target_catnip = catnip;
-  while (current_position.dist < cumulative_dist)
-    ;
+  while (current_position.dist < cumulative_dist) {
+#ifdef DEBUG_PQ
+    printf("vect=%d wall=%d neko=%d v=%d\n", (int)(output_speed.vect),
+           (int)(wall_neko_val), (int)(output_speed.neko),
+           (int)(current_speed.vect));
+#endif
+  }
 
   cumulative_dist += p.const_dist;
   output_speed.target_catnip = 0;
   output_speed.neko = p.max_neko * sign;
-  while (current_position.dist < cumulative_dist)
-    ;
+  while (current_position.dist < cumulative_dist) {
+#ifdef DEBUG_PQ
+    printf("vect=%d wall=%d neko=%d v=%d\n", (int)(output_speed.vect),
+           (int)(wall_neko_val), (int)(output_speed.neko),
+           (int)(current_speed.vect));
+#endif
+  }
 
   cumulative_dist += p.decel_dist;
   output_speed.target_catnip = -catnip;
-  while (current_position.dist < cumulative_dist)
-    ;
+  while (current_position.dist < cumulative_dist) {
+#ifdef DEBUG_PQ
+    printf("vect=%d wall=%d neko=%d v=%d\n", (int)(output_speed.vect),
+           (int)(wall_neko_val), (int)(output_speed.neko),
+           (int)(current_speed.vect));
+#endif
+  }
+
   cumulative_dist += p.post_offset_dist;
   output_speed.target_catnip = 0;
   output_speed.neko = 0;
-  while (current_position.dist < cumulative_dist)
-    ;
+  while (current_position.dist < cumulative_dist) {
+#ifdef DEBUG_PQ
+    printf("vect=%d wall=%d neko=%d v=%d\n", (int)(output_speed.vect),
+           (int)(wall_neko_val), (int)(output_speed.neko),
+           (int)(current_speed.vect));
+#endif
+  }
 
   drive_stop();
 }

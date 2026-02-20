@@ -48,17 +48,16 @@ float side_wall_control(SensorValues_t s, SensorValues_t base_s,
   if (!is_ctrl_on)
     return 0.0f;
 
-  float speed_factor = (current_v > 50.0f) ? (500.0f / current_v) : 1.0f;
-  float comp_l =
-      (!vanish_l) ? ((int16_t)s.SensorValueL - (int16_t)base_s.SensorValueL) *
-                        speed_factor
-                  : 0.0f;
-  float comp_r =
-      (!vanish_r) ? ((int16_t)s.SensorValueR - (int16_t)base_s.SensorValueR) *
-                        speed_factor
-                  : 0.0f;
+  float comp_l = (!vanish_l)
+                     ? ((int16_t)s.SensorValueL - (int16_t)base_s.SensorValueL)
+                     : 0.0f;
+  float comp_r = (!vanish_r)
+                     ? ((int16_t)s.SensorValueR - (int16_t)base_s.SensorValueR)
+                     : 0.0f;
 
-  float wall_comp = comp_l - comp_r;
+  float speed_factor = (current_v > 50.0f) ? (500.0f / current_v) : 1.0f;
+
+  float wall_comp = (comp_l - comp_r);
   wall_comp *= SIDE_WALL_NEKO_P;
   return max(min(wall_comp, CTRL_MAX), -CTRL_MAX);
 }
