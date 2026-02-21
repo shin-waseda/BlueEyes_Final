@@ -295,6 +295,7 @@ void drive_slalom(SlalomProfile p, bool direction) {
   output_speed.neko = 0;
   output_speed.target_catnip = 0;
 
+  MF.FLAG.CTRL = 1;
   drive_start();
 
   float cumulative_dist = 0;
@@ -311,6 +312,7 @@ void drive_slalom(SlalomProfile p, bool direction) {
            (int)(current_speed.vect));
 #endif
   }
+  MF.FLAG.CTRL = 0;
 
   cumulative_dist += p.acc_dist;
   output_speed.target_catnip = catnip;
@@ -342,6 +344,8 @@ void drive_slalom(SlalomProfile p, bool direction) {
            (int)(current_speed.vect));
 #endif
   }
+
+  MF.FLAG.CTRL = 1;
 
   cumulative_dist += p.post_offset_dist;
   output_speed.target_catnip = 0;

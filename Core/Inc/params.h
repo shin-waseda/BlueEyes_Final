@@ -35,17 +35,17 @@ typedef struct {
 #define R180_ANGLE 162.0f
 #define DEFAULT_NEKO 200
 #define DEFAULT_VECT 200
-#define CALC_OFFSET_DIST 10.0f
+#define CALC_OFFSET_DIST 13.0f
 
 // trajectory.c
 #define ACCEL 500
 #define MAX_VECT 1500
 
 // maze.c
-// #define GOAL_NUM 4
+#define GOAL_NUM 4
+#define GOAL_X 7
+#define GOAL_Y 7
+// #define GOAL_NUM 1
 // #define GOAL_X 7
 // #define GOAL_Y 7
-#define GOAL_NUM 1
-#define GOAL_X 1
-#define GOAL_Y 0
 #endif /* PARAMS_H */

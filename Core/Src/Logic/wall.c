@@ -40,6 +40,19 @@ void update_wall_state(SensorValues_t s, SensorValues_t pre_s, float v) {
                            WALL_BASE_L);
   delta_r_cnt = wall_check(s.SensorValueR, pre_s.SensorValueR, v, delta_r_cnt,
                            WALL_BASE_R);
+
+  // MF.FLAG.WALL_VANISH_L = (delta_l_cnt > 0);
+  // MF.FLAG.WALL_VANISH_R = (delta_r_cnt > 0);
+  // if (MF.FLAG.WALL_VANISH_L) {
+  //   dist_after_wall_vanish_l += fabsf(current_speed.vect) * TIMER_CLOCK;
+  // } else {
+  //   dist_after_wall_vanish_l = 0.0f;
+  // }
+  // if (MF.FLAG.WALL_VANISH_R) {
+  //   dist_after_wall_vanish_r += fabsf(current_speed.vect) * TIMER_CLOCK;
+  // } else {
+  //   dist_after_wall_vanish_r = 0.0f;
+  // }
 }
 
 float side_wall_control(SensorValues_t s, SensorValues_t base_s,

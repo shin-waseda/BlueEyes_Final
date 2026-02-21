@@ -4,28 +4,28 @@
 #include "logic.h"
 #include <stdio.h>
 
-const SlalomProfile S90_400 = {.acc_dist = 25.6,
-                               .decel_dist = 25.6,
-                               .const_dist = 44.0,
+const SlalomProfile S90_400 = {.acc_dist = 24.6,
+                               .decel_dist = 24.6,
+                               .const_dist = 49.0,
                                .pre_offset_dist = 10.0 + 23,
-                               .post_offset_dist = 20.0 + 3,
+                               .post_offset_dist = 20.0 + 3 + 2,
                                .target_catnip = 5000,
-                               .max_neko = 350,
+                               .max_neko = 330,
                                .target_v = 400};
 
-const SlalomProfile S90_500 = {.acc_dist = 43.0,
-                               .decel_dist = 43.0,
-                               .const_dist = 32.0,
-                               .pre_offset_dist = 20.0,
-                               .post_offset_dist = 10.0,
-                               .target_catnip = 7000,
-                               .max_neko = 600,
+const SlalomProfile S90_500 = {.acc_dist = 16.0,
+                               .decel_dist = 16.0,
+                               .const_dist = 45.0,
+                               .pre_offset_dist = 10.0 + 20,
+                               .post_offset_dist = 20.0 + 25,
+                               .target_catnip = 5000,
+                               .max_neko = 440,
                                .target_v = 500};
 
-const SlalomProfile S90_600 = {.acc_dist = 60.0,
-                               .decel_dist = 60.0,
-                               .const_dist = 30.0,
-                               .pre_offset_dist = 0.0,
+const SlalomProfile S90_600 = {.acc_dist = 35.0,
+                               .decel_dist = 35.0,
+                               .const_dist = 20.0,
+                               .pre_offset_dist = 10.0,
                                .post_offset_dist = 20.0,
                                .target_catnip = 6000,
                                .max_neko = 600,
@@ -263,7 +263,8 @@ void test_rotate(void) {
 void test_slalom(void) {
   MF.FLAG.CALC_OFFSET = 0;
   SlalomProfile p = select_S90_param(select_mode(1));
-  uint16_t dir = select_mode(1);        // 1:Right, 2:Left
+  uint16_t dir = 1;
+  // select_mode(1);        // 1:Right, 2:Left
   uint16_t count_mode = select_mode(1); // 1:1time, other:16times
 
   bool is_right = (dir == 1);
@@ -271,12 +272,15 @@ void test_slalom(void) {
 
   printf("Slalom Test: Profile %.0f, %s, %d times\n", p.target_v,
          is_right ? "Right" : "Left", count);
-  set_position(0);
-  drive_trapezoid(90, current_speed.vect, 400, p.target_v);
+  // set_position(0);
+  start_sequence();
+  MF.FLAG.CTRL = 1;
+  drive_trapezoid(90 * 3, 200, p.target_v, p.target_v);
+  MF.FLAG.CTRL = 0;
   for (int i = 0; i < count; i++) {
     drive_slalom(p, is_right);
   }
-  // drive_trapezoid(180, current_speed.vect, 200, p.target_v);
+  drive_trapezoid(90 * 1, current_speed.vect, 200, p.target_v);
 }
 
 void test_drive(void) {

@@ -30,4 +30,7 @@ volatile LEDinfo LC;
 volatile uint8_t route[512];
 volatile uint16_t smap[16][16];
 volatile uint8_t maze_wall[16][16];
+
+volatile float dist_after_wall_vanish_l = 0.0f;
+volatile float dist_after_wall_vanish_r = 0.0f;
 /* USER CODE BEGIN 0 */

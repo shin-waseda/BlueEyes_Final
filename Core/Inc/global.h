@@ -69,6 +69,8 @@ extern volatile SlalomProfile current_slalom_profile;
 extern volatile MazePosition mouse;
 extern volatile float wall_neko_val;
 
+extern volatile float dist_after_wall_vanish_l;
+extern volatile float dist_after_wall_vanish_r;
 // Flag
 extern volatile mouse_flag_t MF;
 // mode??
