@@ -262,6 +262,75 @@ void run_route_continuous(void) {
   }
 
   one_sectionU();
+  one_sectionU();
+  turn_dir(DIR_TURN_180);
+  led_pattern_goal();
+}
+
+void run_route_continuous_tyo(void) {
+  MF.FLAG.CTRL = 1;
+  MF.FLAG.CALC = 0;
+  MF.FLAG.CALC_OFFSET = 0;
+
+  half_sectionA();
+  adv_pos();
+  LEDinfo tmp;
+
+  r_cnt = 1;
+  float start_v = current_speed.vect;
+
+  while (1) {
+    uint8_t cmd = route[r_cnt++];
+    // printf("cmd:%02X next:%02X\n", cmd, next_cmd);
+    if (cmd == 0xFF) {
+      drive_stop();
+      break;
+    }
+
+    if ((cmd & 0xF0) == 0x80) {
+      tmp.LEDs = 0;
+      tmp.LED.front = 1;
+      led_write(tmp);
+      int n = cmd & 0x0F;
+      float dist = n * (HALF_SEC_DIST * 2);
+
+      float end_v = current_slalom_profile.target_v;
+
+      MF.FLAG.CTRL = 1;
+
+      drive_trapezoid(dist, start_v, end_v, target_speed.vect);
+      start_v = current_slalom_profile.target_v;
+
+      for (int i = 0; i < n; i++) {
+        adv_pos();
+      }
+    } else if (cmd == 0x44) {
+      tmp.LEDs = 0;
+      tmp.LED.right = 1;
+      led_write(tmp);
+      MF.FLAG.CTRL = 0;
+      turn_right(0);
+      turn_dir(DIR_TURN_R90);
+      adv_pos();
+      start_v = current_slalom_profile.target_v;
+    } else if (cmd == 0x11) {
+      tmp.LEDs = 0;
+      tmp.LED.left = 1;
+      led_write(tmp);
+      MF.FLAG.CTRL = 0;
+      turn_left(0);
+      turn_dir(DIR_TURN_L90);
+      adv_pos();
+      start_v = current_slalom_profile.target_v;
+    }
+    // printf("loop end   v=%d\n", (int)current_speed.vect);
+    if (is_goal()) {
+      break;
+    }
+  }
+
+  one_sectionU();
+  one_sectionU();
   turn_dir(DIR_TURN_180);
   led_pattern_goal();
 }

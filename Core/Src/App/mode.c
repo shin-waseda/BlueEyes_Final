@@ -69,13 +69,13 @@ uint8_t execute_mode(uint8_t mode) {
     start_sequence();
 
     led_pattern_search();
-    searchB_adachi(0);
+    searchB_dijkstra(0);
     HAL_Delay(500);
 
     goal_x = goal_y = 0;
     MF.FLAG.RETURN = 1;
     led_pattern_search();
-    searchB_adachi(0);
+    searchB_dijkstra(0);
 
     goal_x = GOAL_X;
     goal_y = GOAL_Y;
@@ -155,30 +155,64 @@ uint8_t execute_mode(uint8_t mode) {
     break;
 
   case 5:
-    printf("Dijkstra Test.\n");
+    //     printf("Dijkstra Test.\n");
+
+    //     load_map_from_flash();
+
+    //     make_smap_adachi();
+    //     make_route();
+    //     dump_adachi_map();
+
+    // #ifdef DEBUG_PQ
+    //     drive_start();
+    //     calc_cnt = 0;
+    //     MF.FLAG.DEBUG_MODE = 1;
+    // #endif
+    //     dijkstra_multi_goal(fw_goals, GOAL_NUM);
+    //     make_route_dijkstra(mouse.y, mouse.x, mouse.dir);
+    // #ifdef DEBUG_PQ
+    //     MF.FLAG.DEBUG_MODE = 0;
+    //     printf("calc_cnt : %d\n", calc_cnt);
+    // #endif
+    //     dump_dijkstra_map(mouse.y, mouse.x, mouse.dir, fw_goals, GOAL_NUM);
+    //     dump_route_dijkstra();
+    select_speed(select_mode(1));
+    current_slalom_profile = select_S90_param(select_mode(1));
+    enable_motor();
+    MF.FLAG.SCND = 1;
+
+    start_sequence();
+
+    MF.FLAG.RETURN = 0;
+    led_pattern_search();
 
     load_map_from_flash();
 
-    make_smap_adachi();
-    make_route();
-    dump_adachi_map();
-
-#ifdef DEBUG_PQ
-    drive_start();
-    calc_cnt = 0;
-    MF.FLAG.DEBUG_MODE = 1;
-#endif
     dijkstra_multi_goal(fw_goals, GOAL_NUM);
     make_route_dijkstra(mouse.y, mouse.x, mouse.dir);
-#ifdef DEBUG_PQ
-    MF.FLAG.DEBUG_MODE = 0;
-    printf("calc_cnt : %d\n", calc_cnt);
-#endif
     dump_dijkstra_map(mouse.y, mouse.x, mouse.dir, fw_goals, GOAL_NUM);
     dump_route_dijkstra();
+
+    run_route_continuous_tyo();
+
+    disable_motor();
     break;
   case 6:
-    test_drive();
+    select_speed(select_mode(1));
+    current_slalom_profile = select_S90_param(select_mode(1));
+    enable_motor();
+    MF.FLAG.SCND = 1;
+    goal_x = GOAL_X;
+    goal_y = GOAL_Y;
+
+    start_sequence();
+
+    MF.FLAG.RETURN = 0;
+    led_pattern_search();
+    searchB_dijkstra(0);
+
+    disable_motor();
+    // test_drive();
     break;
 
   case 7:
